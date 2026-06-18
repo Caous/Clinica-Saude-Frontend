@@ -26,7 +26,7 @@ interface FormSessionProps {
     onCalendarRefresh?: () => void;
 }
 
-export default function FormSession({ clienteId, scheduleData, closeModal, onSuccess, onCalendarRefresh }: FormSessionProps) {
+export default function FormSession({ clienteId, closeModal, onSuccess, onCalendarRefresh }: FormSessionProps) {
     const [historicoTemp, setHistoricoTemp] = useState("");
 
     const getCurrentTime = () => {
