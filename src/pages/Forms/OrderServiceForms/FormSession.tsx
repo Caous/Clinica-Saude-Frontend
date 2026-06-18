@@ -17,8 +17,6 @@ import TextArea from "../../../components/form/input/TextArea";
 import { HistoryCustomerRequestDto } from "../../../services/model/Dto/Request/CustomerRequestDto";
 import { getCustomerHistoryAsync, postCustomerHistoryAsync } from "../../../services/service/CustomerService";
 import { HistoryCustomerResponseDto, CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
-import { putScheduleAsync } from "../../../services/service/ScheduleService";
-import { EScheduleStatus } from "../../../services/model/Enum/EScheduleStatus";
 
 interface FormSessionProps {
     clienteId?: string;
@@ -60,45 +58,14 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         onSuccess: async (response) => {
             if (response.status === 200) {
                 toast.success("Sessão registrada com sucesso!");
-                
-                // ===== NOVO CÓDIGO - ATUALIZAR SCHEDULE PARA FINALIZADO =====
-                if (scheduleData && scheduleData.id) {
-                    try {
-                        const updateResponse = await putScheduleAsync({
-                            id: scheduleData.id,
-                            status: EScheduleStatus.Finalizado,
-                            titulo: scheduleData.titulo,
-                            descricao: scheduleData.descricao,
-                            localizacao: scheduleData.localizacao,
-                            observacao: scheduleData.observacao,
-                            dataInicio: scheduleData.dataInicio,
-                            dataFim: scheduleData.dataFim,
-                            diaTodo: scheduleData.diaTodo,
-                            clienteId: scheduleData.clienteId,
-                            funcionarioId: scheduleData.funcionarioId,
-                            filialId: scheduleData.filialId,
-                            notificar: scheduleData.notificar,
-                            minutosAntesNotificacao: scheduleData.minutosAntesNotificacao,
-                        });
-                        
-                        if (updateResponse.status === 200) {
-                            toast.success("Status do agendamento atualizado para Finalizado!");
-                            
-                            // Recarregar calendário após sucesso
-                            if (onCalendarRefresh) {
-                                onCalendarRefresh();
-                            }
-                        } else {
-                            toast.error("Falha ao atualizar status do agendamento", { duration: 4000 });
-                        }
-                    } catch (error) {
-                        toast.error("Sessão registrada, mas erro ao atualizar status do agendamento.", 
-                            { duration: 4000 });
-                        console.error("Erro ao atualizar Schedule:", error);
-                    }
+
+                // O status do agendamento NÃO é mais alterado automaticamente.
+                // O usuário muda o status na mão. Apenas recarregamos o calendário
+                // para refletir o check-in do fisioterapeuta (ícone 🚀).
+                if (onCalendarRefresh) {
+                    onCalendarRefresh();
                 }
-                // ===== FIM DO NOVO CÓDIGO =====
-                
+
                 // Invalidar queries do cliente
                 queryClient.invalidateQueries<CustomerResponseDto[]>({
                     queryKey: ["allCustomer"],
