@@ -16,6 +16,7 @@ import { CustomerResponseDto } from "../services/model/Dto/Response/CustomerResp
 import { HistoryCustomerResponseDto } from "../services/model/Dto/Response/CustomerResponseDto";
 import { getAllSessionsAsync } from "../services/service/SessionService";
 import { OrderServiceSessionResponseDto } from "../services/model/Dto/Response/OrderServiceSessionResponseDto";
+import { ETipoCheckIn } from "../services/model/Enum/ETipoCheckIn";
 import Label from "../components/form/Label";
 import Select from "../components/form/Select";
 import SelectWithSearch from "../components/form/SelectWithSearch";
@@ -790,6 +791,19 @@ const Calendar: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Carrega check-ins (sessões) do período visível para marcar eventos com
+  // check-in do fisioterapeuta (ícone 🚀)
+  const { data: sessoesCalendario } = useQuery({
+    queryKey: ["sessoes-calendario", filter.data, filter.dataFim],
+    queryFn: () =>
+      getAllSessionsAsync({ dataInicio: filter.data, dataFim: filter.dataFim }),
+    enabled: !!filter.data && !!filter.dataFim,
+    retry: 3,
+    retryDelay: 30000,
+    staleTime: 0,
+    cacheTime: 0,
+  });
+
   const { data: filiaisData, isError: isErrorFiliais } = useQuery({
     queryKey: ["filiais"],
     queryFn: () => BranchOfficeService.getAll(),
@@ -819,6 +833,28 @@ const Calendar: React.FC = () => {
       : [];
     const clientesArray = Array.isArray(clientesData) ? clientesData : [];
     const filiaisArray = Array.isArray(filiaisData) ? filiaisData : [];
+
+    // Normaliza data (Date ou string) para chave YYYY-MM-DD
+    const toDateKey = (value: string | Date | undefined | null): string => {
+      if (!value) return "";
+      const d = typeof value === "string" ? new Date(value) : value;
+      if (isNaN(d.getTime())) {
+        // string já no formato YYYY-MM-DD
+        return typeof value === "string" ? value.substring(0, 10) : "";
+      }
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    // Conjunto de chaves clienteId|data com check-in do fisioterapeuta (🚀)
+    const sessoesArray = Array.isArray(sessoesCalendario) ? sessoesCalendario : [];
+    const checkInFisioKeys = new Set<string>(
+      sessoesArray
+        .filter((s) => s.tipoCheckIn === ETipoCheckIn.Fisio && s.clienteId)
+        .map((s) => `${s.clienteId}|${toDateKey(s.dataSessao)}`),
+    );
 
     // Cria o map de id do funcionário para cor
     const funcionarioColorMap = funcionariosArray.reduce(
@@ -877,6 +913,15 @@ const Calendar: React.FC = () => {
         // Buscar nome da filial
         const filial = filiaisArray.find(
           (f: any) => f.id === schedule.filialId,
+        );
+
+        // Evento teve cliente e o fisioterapeuta fez check-in nesse dia → 🚀
+        const clienteIdEvento = schedule.clienteId || schedule.idCliente;
+        const temCheckInFisio = !!(
+          clienteIdEvento &&
+          checkInFisioKeys.has(
+            `${clienteIdEvento}|${toDateKey(schedule.dataInicio)}`,
+          )
         );
 
         const funcionarioIdToUse =
@@ -963,6 +1008,7 @@ const Calendar: React.FC = () => {
             filial: filial?.nomeFilial || "Não informado",
             observacao: schedule.observacao || "Sem observação",
             status: schedule.status,
+            temCheckInFisio,
           },
         };
       });
@@ -973,6 +1019,7 @@ const Calendar: React.FC = () => {
     funcionariosData,
     clientesData,
     filiaisData,
+    sessoesCalendario,
     filterCliente,
     filterStatus,
     selectedFuncionario,
@@ -1800,6 +1847,7 @@ const Calendar: React.FC = () => {
       filial,
       observacao,
       status,
+      temCheckInFisio,
     } = eventInfo.event.extendedProps;
 
     // Função para truncar o nome do cliente
@@ -1829,6 +1877,11 @@ const Calendar: React.FC = () => {
           }}
         >
           {getStatusIcon(status)}
+          {temCheckInFisio && (
+            <span style={{ marginLeft: "2px" }} title="Check-in do fisioterapeuta realizado">
+              🚀
+            </span>
+          )}
         </div>
         <div className="fc-event-time" style={{ color: textColor }}>
           {eventInfo.timeText}
