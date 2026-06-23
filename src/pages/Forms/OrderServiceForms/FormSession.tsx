@@ -11,15 +11,13 @@ import { OrderServiceSessionRequestDto } from "../../../services/model/Dto/Reque
 import { OrderServiceResponseDto } from "../../../services/model/Dto/Response/OrderServiceResponseDto";
 import { createSessionAsync, getAllSessionsAsync } from "../../../services/service/SessionService";
 import { ESessionStatus } from "../../../services/model/Enum/ESessionStatus";
+import { ETipoCheckIn } from "../../../services/model/Enum/ETipoCheckIn";
 import { OrderServiceSessionResponseDto } from "../../../services/model/Dto/Response/OrderServiceSessionResponseDto";
 import TextArea from "../../../components/form/input/TextArea";
 import { HistoryCustomerRequestDto } from "../../../services/model/Dto/Request/CustomerRequestDto";
 import { getCustomerHistoryAsync, postCustomerHistoryAsync } from "../../../services/service/CustomerService";
 import { HistoryCustomerResponseDto, CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
-import { putScheduleAsync } from "../../../services/service/ScheduleService";
-import { EScheduleStatus } from "../../../services/model/Enum/EScheduleStatus";
-import { ETipoCheckIn } from "../../../services/model/Enum/ETipoCheckIn";
-import { getUserRoleFromToken } from "../../../services/util/rolePermissions";
+import { getUserRoleFromToken, userHasRole, USER_ROLES } from "../../../services/util/rolePermissions";
 
 interface FormSessionProps {
     clienteId?: string;
@@ -53,7 +51,8 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         observacaoSessao: "",
         dataSessao: new Date().toISOString().split("T")[0],
         horaSessao: getCurrentTime(),
-        statusSessao: ESessionStatus.Realizada
+        statusSessao: ESessionStatus.Realizada,
+        tipoCheckIn: ETipoCheckIn.Fisio  // Check-in do fisioterapeuta: apenas informativo
     });
     const [showHistorico, setShowHistorico] = useState(false);
     const [showSessaoHistorico, setShowSessao] = useState(false);
@@ -68,45 +67,14 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         onSuccess: async (response) => {
             if (response.status === 200) {
                 toast.success("Sessão registrada com sucesso!");
-                
-                // ===== NOVO CÓDIGO - ATUALIZAR SCHEDULE PARA FINALIZADO =====
-                if (scheduleData && scheduleData.id) {
-                    try {
-                        const updateResponse = await putScheduleAsync({
-                            id: scheduleData.id,
-                            status: EScheduleStatus.Finalizado,
-                            titulo: scheduleData.titulo,
-                            descricao: scheduleData.descricao,
-                            localizacao: scheduleData.localizacao,
-                            observacao: scheduleData.observacao,
-                            dataInicio: scheduleData.dataInicio,
-                            dataFim: scheduleData.dataFim,
-                            diaTodo: scheduleData.diaTodo,
-                            clienteId: scheduleData.clienteId,
-                            funcionarioId: scheduleData.funcionarioId,
-                            filialId: scheduleData.filialId,
-                            notificar: scheduleData.notificar,
-                            minutosAntesNotificacao: scheduleData.minutosAntesNotificacao,
-                        });
-                        
-                        if (updateResponse.status === 200) {
-                            toast.success("Status do agendamento atualizado para Finalizado!");
-                            
-                            // Recarregar calendário após sucesso
-                            if (onCalendarRefresh) {
-                                onCalendarRefresh();
-                            }
-                        } else {
-                            toast.error("Falha ao atualizar status do agendamento", { duration: 4000 });
-                        }
-                    } catch (error) {
-                        toast.error("Sessão registrada, mas erro ao atualizar status do agendamento.", 
-                            { duration: 4000 });
-                        console.error("Erro ao atualizar Schedule:", error);
-                    }
+
+                // O status do agendamento NÃO é mais alterado automaticamente.
+                // O usuário muda o status na mão. Apenas recarregamos o calendário
+                // para refletir o check-in do fisioterapeuta (ícone 🚀).
+                if (onCalendarRefresh) {
+                    onCalendarRefresh();
                 }
-                // ===== FIM DO NOVO CÓDIGO =====
-                
+
                 // Invalidar queries do cliente
                 queryClient.invalidateQueries<CustomerResponseDto[]>({
                     queryKey: ["allCustomer"],
@@ -189,8 +157,8 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         const sessaoTotal = ordemSelecionada.qtdSessaoTotal ?? 0;
         const sessoesRealizadas = (ordemSelecionada.sessoes ?? [])
             .filter(s =>
-                (s.tipoCheckIn === 1 || s.tipoCheckIn === undefined) && // 1=Plano (debita), undefined=legado
-                (s.statusSessao === 0 || s.statusSessao === 1)           // 0=Realizada, 1=Faltou
+                (s.tipoCheckIn === ETipoCheckIn.Plano || s.tipoCheckIn === undefined) && // Plano debita do plano do paciente
+                (s.statusSessao === 0 || s.statusSessao === 1)                          // Realizada ou Faltou
             )
             .length;
 
@@ -216,8 +184,32 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         });
     }, [sessions, formData.orderServiceId, formData.dataSessao]);
 
+    // Regra das 48hrs: o perfil Fisioterapeuta não pode fazer check-in após
+    // 48h do fim do atendimento (Data & Hora Fim do agendamento selecionado).
+    // Não se aplica a Coordenador/Administrador/Administrativo.
+    const bloqueadoPor48hrs = useMemo(() => {
+        const userRoles = getUserRoleFromToken(localStorage.getItem("token"));
+        const isFisioterapeuta =
+            userHasRole(userRoles, USER_ROLES.FISIOTERAPEUTA) &&
+            !userHasRole(userRoles, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
+
+        if (!isFisioterapeuta) return false;
+        if (!scheduleData?.dataFim) return false;
+
+        const dataFim = new Date(scheduleData.dataFim);
+        if (isNaN(dataFim.getTime())) return false;
+
+        const limite = dataFim.getTime() + 48 * 60 * 60 * 1000;
+        return Date.now() > limite;
+    }, [scheduleData]);
+
     // Validar se pode fazer check-in
     const podeRealizarCheckIn = useMemo(() => {
+        // Fisioterapeuta passou das 48h do fim do atendimento → bloqueia
+        if (bloqueadoPor48hrs) {
+            return false;
+        }
+
         // Precisa ter uma ordem selecionada
         if (!formData.orderServiceId) {
             return false;
@@ -228,6 +220,11 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
             return false;
         }
 
+        // Check-in do fisioterapeuta exige preenchimento do histórico/conduta médica
+        if (formData.tipoCheckIn === ETipoCheckIn.Fisio && !historicoTemp.trim()) {
+            return false;
+        }
+
         // Se o status for "Realizada" (0), precisa validar o limite
         if (formData.statusSessao === ESessionStatus.Realizada) {
             return !sessaoInfo.limiteAtingido;
@@ -235,11 +232,23 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
 
         // Para outros status (Faltou, Reagendada, Cancelada), pode registrar
         return true;
-    }, [formData.orderServiceId, formData.statusSessao, sessaoInfo.limiteAtingido, jaFezCheckInNestePlanoDia]);
+    }, [formData.orderServiceId, formData.statusSessao, formData.tipoCheckIn, historicoTemp, sessaoInfo.limiteAtingido, jaFezCheckInNestePlanoDia, bloqueadoPor48hrs]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Regra das 48hrs para o perfil Fisioterapeuta
+        if (bloqueadoPor48hrs) {
+            toast.error("Não é possível registrar o check-in: já se passaram mais de 48h do fim do atendimento.", { duration: 5000 });
+            return;
+        }
+
+        // Check-in do fisioterapeuta exige histórico/conduta médica preenchido
+        if (formData.tipoCheckIn === ETipoCheckIn.Fisio && !historicoTemp.trim()) {
+            toast.error("O preenchimento do histórico/conduta médica é obrigatório para realizar o check-in.", { duration: 5000 });
+            return;
+        }
 
         // Validação adicional de limite de sessões
         if (formData.statusSessao === ESessionStatus.Realizada && sessaoInfo.limiteAtingido) {
@@ -476,17 +485,15 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
                                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-1">
                                     <div>
                                         <Label>
-                                            Histórico/Conduta
-                                            {isFisioterapeuta && (
-                                                <span className="ml-1 text-error-500 font-bold" title="Obrigatório para Fisioterapeuta">*</span>
-                                            )}
+                                            Histórico / Conduta Médica
+                                            <span className="text-red-400 ml-1">*</span>
                                         </Label>
-                                        {isFisioterapeuta && (
-                                            <p className="mb-1 text-xs text-amber-600 dark:text-amber-400">
-                                                Obrigatório: descreva a conduta clínica realizada nesta sessão.
+                                        <TextArea placeholder="Descreva a conduta médica e evolução do paciente nesta sessão (obrigatório)" value={historicoTemp} onChange={(value) => setHistoricoTemp(value)} />
+                                        {!historicoTemp.trim() && (
+                                            <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+                                                O histórico/conduta médica é obrigatório para realizar o check-in.
                                             </p>
                                         )}
-                                        <TextArea placeholder="Escreva o histórico que desejar" value={historicoTemp} onChange={(value) => setHistoricoTemp(value)} />
                                     </div>
                                 </div>
                             </div>
@@ -666,6 +673,11 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
                                 </div>
                             )}
                         </div>
+                        {bloqueadoPor48hrs && (
+                            <p className="px-2 mt-4 text-sm text-red-500 lg:text-right">
+                                Não é possível fazer check-in após 48h do fim do atendimento do cliente.
+                            </p>
+                        )}
                         <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
                             <button
                                 type="button"
@@ -680,11 +692,15 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
                                 disabled={mutation.isPending || !podeRealizarCheckIn}
                                 title={
                                     !podeRealizarCheckIn
-                                        ? jaFezCheckInNestePlanoDia
+                                        ? bloqueadoPor48hrs
+                                            ? "Não é possível fazer check-in após 48h do fim do atendimento"
+                                            : jaFezCheckInNestePlanoDia
                                             ? "Já existe check-in neste plano nesta data"
                                             : sessaoInfo.limiteAtingido
                                                 ? "Limite de sessões atingido para esta ordem de serviço"
-                                                : "Selecione uma ordem de serviço"
+                                                : !historicoTemp.trim()
+                                                    ? "Preencha o histórico/conduta médica antes de realizar o check-in"
+                                                    : "Selecione uma ordem de serviço"
                                         : "Registrar check-in"
                                 }
                             >

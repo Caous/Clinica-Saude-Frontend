@@ -13,7 +13,7 @@ import { useSessions } from "../../../hooks/useSessions";
 import Badge from "../../ui/badge/Badge";
 import Button from "../../ui/button/Button";
 import { ESessionStatus } from "../../../services/model/Enum/ESessionStatus";
-import { ETipoCheckIn, getTipoCheckInLabel } from "../../../services/model/Enum/ETipoCheckIn";
+import { ETipoCheckIn } from "../../../services/model/Enum/ETipoCheckIn";
 import { OrderServiceSessionResponseDto } from "../../../services/model/Dto/Response/OrderServiceSessionResponseDto";
 import { format, startOfMonth } from "date-fns";
 
@@ -65,6 +65,14 @@ export default function SessionsGrid() {
     return colors[status] || "default";
   };
 
+  const getTipoCheckInLabel = (tipo: ETipoCheckIn) => {
+    return tipo === ETipoCheckIn.Fisio ? "Check-in Fisio" : "Baixa Admin";
+  };
+
+  const getTipoCheckInColor = (tipo: ETipoCheckIn) => {
+    return tipo === ETipoCheckIn.Fisio ? "info" : "success";
+  };
+
   const formatDateTime = (data: string, hora: string) => {
     try {
       const date = new Date(data);
@@ -76,7 +84,6 @@ export default function SessionsGrid() {
 
   // Filtrar sessões
   const filteredSessions = sessions.filter((session: any) => {
-    // Forcar parse como hora local (mesmo comportamento do dataSessao '2026-03-11T00:00:00')
     const sessionDate = new Date(session.dataSessao);
     const startDate = new Date(dataInicio + 'T00:00:00');
     const endDate = new Date(dataFim + 'T00:00:00');
@@ -174,6 +181,22 @@ export default function SessionsGrid() {
               onChange={(e) => setDataFim(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             />
+          </div>
+
+          {/* Tipo de Check-in */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo de Check-in
+            </label>
+            <select
+              value={tipoCheckIn}
+              onChange={(e) => setTipoCheckIn(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            >
+              <option value="">Todos</option>
+              <option value="0">Check-in Fisio</option>
+              <option value="1">Baixa Admin</option>
+            </select>
           </div>
 
           {/* Status */}
@@ -311,6 +334,12 @@ export default function SessionsGrid() {
                         isHeader
                         className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
                       >
+                        Tipo
+                      </TableCell>
+                      <TableCell
+                        isHeader
+                        className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
+                      >
                         Status
                       </TableCell>
                       <TableCell
@@ -353,6 +382,14 @@ export default function SessionsGrid() {
                               session.horaSessao
                             )}
                           </span>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-start">
+                          <Badge
+                            size="sm"
+                            color={getTipoCheckInColor(session.tipoCheckIn) as any}
+                          >
+                            {getTipoCheckInLabel(session.tipoCheckIn)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="px-4 py-3 text-start">
                           <Badge
@@ -432,6 +469,17 @@ export default function SessionsGrid() {
             {selectedSession && (
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mx-2">
                 <div className="space-y-2">
+                  <p className="text-sm">
+                    <strong className="text-gray-700 dark:text-gray-300">
+                      Tipo:
+                    </strong>{" "}
+                    <Badge
+                      size="sm"
+                      color={getTipoCheckInColor(selectedSession.tipoCheckIn) as any}
+                    >
+                      {getTipoCheckInLabel(selectedSession.tipoCheckIn)}
+                    </Badge>
+                  </p>
                   <p className="text-sm">
                     <strong className="text-gray-700 dark:text-gray-300">
                       Fisioterapeuta:
