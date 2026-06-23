@@ -16,6 +16,7 @@ import { CustomerResponseDto } from "../services/model/Dto/Response/CustomerResp
 import { HistoryCustomerResponseDto } from "../services/model/Dto/Response/CustomerResponseDto";
 import { getAllSessionsAsync } from "../services/service/SessionService";
 import { OrderServiceSessionResponseDto } from "../services/model/Dto/Response/OrderServiceSessionResponseDto";
+import { ETipoCheckIn } from "../services/model/Enum/ETipoCheckIn";
 import Label from "../components/form/Label";
 import Select from "../components/form/Select";
 import SelectWithSearch from "../components/form/SelectWithSearch";
@@ -35,6 +36,8 @@ import {
   getUserFuncionarioIdFromToken,
   shouldApplyAgendaFilter,
   canCreateCalendarEvent,
+  userHasRole,
+  USER_ROLES,
 } from "../services/util/rolePermissions";
 import {
   EScheduleStatus,
@@ -788,6 +791,19 @@ const Calendar: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Carrega check-ins (sessões) do período visível para marcar eventos com
+  // check-in do fisioterapeuta (ícone 🚀)
+  const { data: sessoesCalendario } = useQuery({
+    queryKey: ["sessoes-calendario", filter.data, filter.dataFim],
+    queryFn: () =>
+      getAllSessionsAsync({ dataInicio: filter.data, dataFim: filter.dataFim }),
+    enabled: !!filter.data && !!filter.dataFim,
+    retry: 3,
+    retryDelay: 30000,
+    staleTime: 0,
+    cacheTime: 0,
+  });
+
   const { data: filiaisData, isError: isErrorFiliais } = useQuery({
     queryKey: ["filiais"],
     queryFn: () => BranchOfficeService.getAll(),
@@ -817,6 +833,28 @@ const Calendar: React.FC = () => {
       : [];
     const clientesArray = Array.isArray(clientesData) ? clientesData : [];
     const filiaisArray = Array.isArray(filiaisData) ? filiaisData : [];
+
+    // Normaliza data (Date ou string) para chave YYYY-MM-DD
+    const toDateKey = (value: string | Date | undefined | null): string => {
+      if (!value) return "";
+      const d = typeof value === "string" ? new Date(value) : value;
+      if (isNaN(d.getTime())) {
+        // string já no formato YYYY-MM-DD
+        return typeof value === "string" ? value.substring(0, 10) : "";
+      }
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    // Conjunto de chaves clienteId|data com check-in do fisioterapeuta (🚀)
+    const sessoesArray = Array.isArray(sessoesCalendario) ? sessoesCalendario : [];
+    const checkInFisioKeys = new Set<string>(
+      sessoesArray
+        .filter((s) => s.tipoCheckIn === ETipoCheckIn.Fisio && s.clienteId)
+        .map((s) => `${s.clienteId}|${toDateKey(s.dataSessao)}`),
+    );
 
     // Cria o map de id do funcionário para cor
     const funcionarioColorMap = funcionariosArray.reduce(
@@ -875,6 +913,15 @@ const Calendar: React.FC = () => {
         // Buscar nome da filial
         const filial = filiaisArray.find(
           (f: any) => f.id === schedule.filialId,
+        );
+
+        // Evento teve cliente e o fisioterapeuta fez check-in nesse dia → 🚀
+        const clienteIdEvento = schedule.clienteId || schedule.idCliente;
+        const temCheckInFisio = !!(
+          clienteIdEvento &&
+          checkInFisioKeys.has(
+            `${clienteIdEvento}|${toDateKey(schedule.dataInicio)}`,
+          )
         );
 
         const funcionarioIdToUse =
@@ -961,6 +1008,7 @@ const Calendar: React.FC = () => {
             filial: filial?.nomeFilial || "Não informado",
             observacao: schedule.observacao || "Sem observação",
             status: schedule.status,
+            temCheckInFisio,
           },
         };
       });
@@ -971,6 +1019,7 @@ const Calendar: React.FC = () => {
     funcionariosData,
     clientesData,
     filiaisData,
+    sessoesCalendario,
     filterCliente,
     filterStatus,
     selectedFuncionario,
@@ -1198,6 +1247,9 @@ const Calendar: React.FC = () => {
   });
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
+    // Fisioterapeuta e CoordenadorFisioterapeuta não podem criar novos eventos
+    if (!canCreateCalendarEvent(userRole)) return;
+
     resetModalFields();
 
     // Converter as datas para o formato compatível com datetime-local (YYYY-MM-DDTHH:mm)
@@ -1795,6 +1847,7 @@ const Calendar: React.FC = () => {
       filial,
       observacao,
       status,
+      temCheckInFisio,
     } = eventInfo.event.extendedProps;
 
     // Função para truncar o nome do cliente
@@ -1824,6 +1877,11 @@ const Calendar: React.FC = () => {
           }}
         >
           {getStatusIcon(status)}
+          {temCheckInFisio && (
+            <span style={{ marginLeft: "2px" }} title="Check-in do fisioterapeuta realizado">
+              🚀
+            </span>
+          )}
         </div>
         <div className="fc-event-time" style={{ color: textColor }}>
           {eventInfo.timeText}
@@ -2023,6 +2081,11 @@ const Calendar: React.FC = () => {
   const handleReloadClientes = () => {
     queryClient.invalidateQueries({ queryKey: ["clientes"] });
   };
+
+  // Fisioterapeuta e CoordenadorFisioterapeuta só podem alterar o status do agendamento
+  const isFisioOuCoordenador =
+    userHasRole(userRole, USER_ROLES.FISIOTERAPEUTA) ||
+    userHasRole(userRole, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
 
   return (
     <>
@@ -2305,7 +2368,7 @@ const Calendar: React.FC = () => {
                   Agende ou edite um evento e mantanha a clínica em ordem
                 </p>
               </div>
-              {selectedEvent && (
+              {selectedEvent && !isFisioOuCoordenador && (
                 <div className="flex items-center">
                   <button
                     onClick={handleDeleteEvent}
@@ -2395,6 +2458,7 @@ const Calendar: React.FC = () => {
                           id="event-start-date"
                           type="datetime-local"
                           value={eventStartDate}
+                          disabled={isFisioOuCoordenador}
                           onChange={(e) => {
                             const newStart = e.target.value;
                             setEventStartDate(newStart);
@@ -2424,6 +2488,7 @@ const Calendar: React.FC = () => {
                           id="event-end-date"
                           type="datetime-local"
                           value={eventEndDate}
+                          disabled={isFisioOuCoordenador}
                           onChange={(e) => setEventEndDate(e.target.value)}
                           className="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         />
@@ -2446,8 +2511,10 @@ const Calendar: React.FC = () => {
                           className="dark:bg-dark-900"
                           isClearable={true}
                           noOptionsMessage="Nenhum cliente encontrado"
+                          disabled={isFisioOuCoordenador}
                         />
                       </div>
+                      {!isFisioOuCoordenador && (
                       <button
                         onClick={openModalNewCustomer}
                         type="button"
@@ -2469,6 +2536,7 @@ const Calendar: React.FC = () => {
                           />
                         </svg>
                       </button>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -2483,6 +2551,7 @@ const Calendar: React.FC = () => {
                         setModalFuncionario(value === "" ? undefined : value)
                       }
                       className="dark:bg-dark-900"
+                      disabled={isFisioOuCoordenador}
                     />
                   </div>
                   <div>
