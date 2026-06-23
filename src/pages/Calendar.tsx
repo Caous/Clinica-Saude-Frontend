@@ -791,19 +791,6 @@ const Calendar: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Carrega check-ins (sessões) do período visível para marcar eventos com
-  // check-in do fisioterapeuta (ícone 🚀)
-  const { data: sessoesCalendario } = useQuery({
-    queryKey: ["sessoes-calendario", filter.data, filter.dataFim],
-    queryFn: () =>
-      getAllSessionsAsync({ dataInicio: filter.data, dataFim: filter.dataFim }),
-    enabled: !!filter.data && !!filter.dataFim,
-    retry: 3,
-    retryDelay: 30000,
-    staleTime: 0,
-    cacheTime: 0,
-  });
-
   const { data: filiaisData, isError: isErrorFiliais } = useQuery({
     queryKey: ["filiais"],
     queryFn: () => BranchOfficeService.getAll(),
@@ -833,28 +820,6 @@ const Calendar: React.FC = () => {
       : [];
     const clientesArray = Array.isArray(clientesData) ? clientesData : [];
     const filiaisArray = Array.isArray(filiaisData) ? filiaisData : [];
-
-    // Normaliza data (Date ou string) para chave YYYY-MM-DD
-    const toDateKey = (value: string | Date | undefined | null): string => {
-      if (!value) return "";
-      const d = typeof value === "string" ? new Date(value) : value;
-      if (isNaN(d.getTime())) {
-        // string já no formato YYYY-MM-DD
-        return typeof value === "string" ? value.substring(0, 10) : "";
-      }
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    // Conjunto de chaves clienteId|data com check-in do fisioterapeuta (🚀)
-    const sessoesArray = Array.isArray(sessoesCalendario) ? sessoesCalendario : [];
-    const checkInFisioKeys = new Set<string>(
-      sessoesArray
-        .filter((s) => s.tipoCheckIn === ETipoCheckIn.Fisio && s.clienteId)
-        .map((s) => `${s.clienteId}|${toDateKey(s.dataSessao)}`),
-    );
 
     // Cria o map de id do funcionário para cor
     const funcionarioColorMap = funcionariosArray.reduce(
@@ -915,13 +880,11 @@ const Calendar: React.FC = () => {
           (f: any) => f.id === schedule.filialId,
         );
 
-        // Evento teve cliente e o fisioterapeuta fez check-in nesse dia → 🚀
-        const clienteIdEvento = schedule.clienteId || schedule.idCliente;
-        const temCheckInFisio = !!(
-          clienteIdEvento &&
-          checkInFisioKeys.has(
-            `${clienteIdEvento}|${toDateKey(schedule.dataInicio)}`,
-          )
+        // Evento teve cliente e há check-in tipo Fisio no mesmo dia → 🚀
+        // checkIns vem embutido no response do agendamento (backend já casa
+        // por cliente + dia do agendamento).
+        const temCheckInFisio = (schedule.checkIns ?? []).some(
+          (c) => c.tipoCheckIn === ETipoCheckIn.Fisio,
         );
 
         const funcionarioIdToUse =
@@ -1019,7 +982,6 @@ const Calendar: React.FC = () => {
     funcionariosData,
     clientesData,
     filiaisData,
-    sessoesCalendario,
     filterCliente,
     filterStatus,
     selectedFuncionario,
