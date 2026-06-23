@@ -17,6 +17,7 @@ import TextArea from "../../../components/form/input/TextArea";
 import { HistoryCustomerRequestDto } from "../../../services/model/Dto/Request/CustomerRequestDto";
 import { getCustomerHistoryAsync, postCustomerHistoryAsync } from "../../../services/service/CustomerService";
 import { HistoryCustomerResponseDto, CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
+import { getUserRoleFromToken, userHasRole, USER_ROLES } from "../../../services/util/rolePermissions";
 
 interface FormSessionProps {
     clienteId?: string;
@@ -26,7 +27,7 @@ interface FormSessionProps {
     onCalendarRefresh?: () => void;
 }
 
-export default function FormSession({ clienteId, closeModal, onSuccess, onCalendarRefresh }: FormSessionProps) {
+export default function FormSession({ clienteId, scheduleData, closeModal, onSuccess, onCalendarRefresh }: FormSessionProps) {
     const [historicoTemp, setHistoricoTemp] = useState("");
 
     const getCurrentTime = () => {
@@ -175,8 +176,32 @@ export default function FormSession({ clienteId, closeModal, onSuccess, onCalend
         });
     }, [sessions, formData.orderServiceId, formData.dataSessao]);
 
+    // Regra das 48hrs: o perfil Fisioterapeuta não pode fazer check-in após
+    // 48h do fim do atendimento (Data & Hora Fim do agendamento selecionado).
+    // Não se aplica a Coordenador/Administrador/Administrativo.
+    const bloqueadoPor48hrs = useMemo(() => {
+        const userRoles = getUserRoleFromToken(localStorage.getItem("token"));
+        const isFisioterapeuta =
+            userHasRole(userRoles, USER_ROLES.FISIOTERAPEUTA) &&
+            !userHasRole(userRoles, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
+
+        if (!isFisioterapeuta) return false;
+        if (!scheduleData?.dataFim) return false;
+
+        const dataFim = new Date(scheduleData.dataFim);
+        if (isNaN(dataFim.getTime())) return false;
+
+        const limite = dataFim.getTime() + 48 * 60 * 60 * 1000;
+        return Date.now() > limite;
+    }, [scheduleData]);
+
     // Validar se pode fazer check-in
     const podeRealizarCheckIn = useMemo(() => {
+        // Fisioterapeuta passou das 48h do fim do atendimento → bloqueia
+        if (bloqueadoPor48hrs) {
+            return false;
+        }
+
         // Precisa ter uma ordem selecionada
         if (!formData.orderServiceId) {
             return false;
@@ -199,11 +224,17 @@ export default function FormSession({ clienteId, closeModal, onSuccess, onCalend
 
         // Para outros status (Faltou, Reagendada, Cancelada), pode registrar
         return true;
-    }, [formData.orderServiceId, formData.statusSessao, formData.tipoCheckIn, historicoTemp, sessaoInfo.limiteAtingido, jaFezCheckInNestePlanoDia]);
+    }, [formData.orderServiceId, formData.statusSessao, formData.tipoCheckIn, historicoTemp, sessaoInfo.limiteAtingido, jaFezCheckInNestePlanoDia, bloqueadoPor48hrs]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Regra das 48hrs para o perfil Fisioterapeuta
+        if (bloqueadoPor48hrs) {
+            toast.error("Não é possível registrar o check-in: já se passaram mais de 48h do fim do atendimento.", { duration: 5000 });
+            return;
+        }
 
         // Check-in do fisioterapeuta exige histórico/conduta médica preenchido
         if (formData.tipoCheckIn === ETipoCheckIn.Fisio && !historicoTemp.trim()) {
@@ -627,6 +658,11 @@ export default function FormSession({ clienteId, closeModal, onSuccess, onCalend
                                 </div>
                             )}
                         </div>
+                        {bloqueadoPor48hrs && (
+                            <p className="px-2 mt-4 text-sm text-red-500 lg:text-right">
+                                Não é possível fazer check-in após 48h do fim do atendimento do cliente.
+                            </p>
+                        )}
                         <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
                             <button
                                 type="button"
@@ -641,7 +677,9 @@ export default function FormSession({ clienteId, closeModal, onSuccess, onCalend
                                 disabled={mutation.isPending || !podeRealizarCheckIn}
                                 title={
                                     !podeRealizarCheckIn
-                                        ? jaFezCheckInNestePlanoDia
+                                        ? bloqueadoPor48hrs
+                                            ? "Não é possível fazer check-in após 48h do fim do atendimento"
+                                            : jaFezCheckInNestePlanoDia
                                             ? "Já existe check-in neste plano nesta data"
                                             : sessaoInfo.limiteAtingido
                                                 ? "Limite de sessões atingido para esta ordem de serviço"
