@@ -220,12 +220,21 @@ const Calendar: React.FC = () => {
     );
   })();
 
+  // Fisioterapeuta já registrou check-in (tipo Fisio) para este dia/evento?
+  const checkInFisioJaFeito =
+    isFisioterapeutaUser &&
+    Array.isArray(currentEventData?.checkIns) &&
+    currentEventData.checkIns.some(
+      (c: any) => c.tipoCheckIn === ETipoCheckIn.Fisio,
+    );
+
   // Botão de Check-in:
   // - Fisioterapeuta pode fazer check-in mesmo com o evento já encerrado
-  //   (ex: baixa administrativa feita antes), desde que dentro das 48h.
+  //   (ex: baixa administrativa feita antes), desde que dentro das 48h e
+  //   desde que ainda não tenha feito o check-in Fisio neste dia.
   // - Demais perfis seguem a regra de evento encerrado (buttonsDisabled).
   const checkInButtonDisabled = isFisioterapeutaUser
-    ? checkInBloqueado48h
+    ? checkInBloqueado48h || checkInFisioJaFeito
     : buttonsDisabled;
 
   // Estados para exclusão personalizada de recorrência
@@ -3398,6 +3407,11 @@ const Calendar: React.FC = () => {
               </div>
               {/* Fim do container com scroll */}
             </div>
+            {selectedEvent && selectedCliente && checkInFisioJaFeito && (
+              <p className="mt-4 text-sm text-red-500 text-center sm:text-right">
+                Você já fez check-in para este paciente neste dia.
+              </p>
+            )}
             <div className="flex items-center gap-3 mt-6 modal-footer sm:justify-end">
               <button
                 onClick={closeModal}
@@ -3414,11 +3428,13 @@ const Calendar: React.FC = () => {
                   type="button"
                   disabled={checkInButtonDisabled}
                   title={
-                    checkInBloqueado48h
-                      ? "Não é possível fazer check-in após 48h do fim do atendimento"
-                      : checkInButtonDisabled
-                        ? "Evento encerrado — edição bloqueada para este perfil"
-                        : undefined
+                    checkInFisioJaFeito
+                      ? "Você já fez check-in para este paciente neste dia"
+                      : checkInBloqueado48h
+                        ? "Não é possível fazer check-in após 48h do fim do atendimento"
+                        : checkInButtonDisabled
+                          ? "Evento encerrado — edição bloqueada para este perfil"
+                          : undefined
                   }
                   className={`flex w-full justify-center rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto ${
                     checkInButtonDisabled
