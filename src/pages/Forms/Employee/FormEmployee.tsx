@@ -304,6 +304,20 @@ export default function FormEmployee({
     return primeiro + ultimo;
   };
 
+  // Inteiro aleatório em [0, max) usando CSPRNG (crypto.getRandomValues),
+  // com rejeição para evitar viés de módulo. Math.random não é
+  // criptograficamente seguro (previsível), por isso não é usado aqui.
+  const randomInt = (max: number): number => {
+    const limite = Math.floor(0xffffffff / max) * max;
+    const buffer = new Uint32Array(1);
+    let valor = 0;
+    do {
+      crypto.getRandomValues(buffer);
+      valor = buffer[0];
+    } while (valor >= limite);
+    return valor % max;
+  };
+
   // Gera senha que atende às regras do Identity: maiúscula, minúscula,
   // dígito e tamanho mínimo (>= 6). Inclui também um caractere especial.
   const gerarSenha = (): string => {
@@ -311,14 +325,16 @@ export default function FormEmployee({
     const minusc = "abcdefghijkmnpqrstuvwxyz";
     const digitos = "23456789";
     const especiais = "@#$_";
-    const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+    const pick = (s: string) => s[randomInt(s.length)];
     const todos = maiusc + minusc + digitos;
-    let senha = pick(maiusc) + pick(minusc) + pick(digitos) + pick(especiais);
-    for (let i = 0; i < 6; i++) senha += pick(todos);
-    return senha
-      .split("")
-      .sort(() => Math.random() - 0.5)
-      .join("");
+    const chars = [pick(maiusc), pick(minusc), pick(digitos), pick(especiais)];
+    for (let i = 0; i < 6; i++) chars.push(pick(todos));
+    // Embaralhamento Fisher-Yates com CSPRNG
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    return chars.join("");
   };
 
   const handleChange = (
