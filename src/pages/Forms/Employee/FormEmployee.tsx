@@ -289,6 +289,38 @@ export default function FormEmployee({
     }
   };
 
+  // Gera um username a partir do nome: primeiro + último nome, sem acentos/espaços.
+  // Ex: "Gustavo Rozario Nascimento" -> "GustavoNascimento"
+  const gerarUsername = (nome: string): string => {
+    const limpar = (s: string) =>
+      s
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "");
+    const partes = (nome ?? "").trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) return "";
+    const primeiro = limpar(partes[0]);
+    const ultimo = partes.length > 1 ? limpar(partes[partes.length - 1]) : "";
+    return primeiro + ultimo;
+  };
+
+  // Gera senha que atende às regras do Identity: maiúscula, minúscula,
+  // dígito e tamanho mínimo (>= 6). Inclui também um caractere especial.
+  const gerarSenha = (): string => {
+    const maiusc = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const minusc = "abcdefghijkmnpqrstuvwxyz";
+    const digitos = "23456789";
+    const especiais = "@#$_";
+    const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+    const todos = maiusc + minusc + digitos;
+    let senha = pick(maiusc) + pick(minusc) + pick(digitos) + pick(especiais);
+    for (let i = 0; i < 6; i++) senha += pick(todos);
+    return senha
+      .split("")
+      .sort(() => Math.random() - 0.5)
+      .join("");
+  };
+
   const handleChange = (
     eventOrName: React.ChangeEvent<HTMLInputElement> | string,
     manualValue?: string
@@ -588,6 +620,17 @@ export default function FormEmployee({
                       setFormData((prev) => ({
                         ...prev,
                         createUser: checked,
+                        // Ao marcar, auto-preenche usuário (nome+sobrenome) e
+                        // uma senha válida, se ainda estiverem vazios. Campos
+                        // continuam editáveis.
+                        userName:
+                          checked && !prev.userName
+                            ? gerarUsername(prev.nome ?? "")
+                            : prev.userName,
+                        password:
+                          checked && !prev.password
+                            ? gerarSenha()
+                            : prev.password,
                       }));
                     }}
                     className="dark:bg-dark-900"
