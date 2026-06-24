@@ -194,6 +194,24 @@ const Calendar: React.FC = () => {
     STATUSES_BLOQUEADOS.includes(selectedStatus as EScheduleStatus);
   const buttonsDisabled = eventoEncerrado && !isAdministrador;
 
+  // Regra das 48h: o perfil Fisioterapeuta não pode iniciar check-in após 48h
+  // do fim do atendimento (Data & Hora Fim do evento). Bloqueia já o botão que
+  // abre o modal de check-in. Não se aplica a Coordenador/Admin/Administrativo.
+  const checkInBloqueado48h = (() => {
+    const rolesToken = getUserRoleFromToken(localStorage.getItem("token"));
+    const isFisioterapeuta =
+      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) &&
+      !userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
+    if (!isFisioterapeuta) return false;
+
+    const dataFimEvento = currentEventData?.dataFim;
+    if (!dataFimEvento) return false;
+    const dataFim = new Date(dataFimEvento);
+    if (isNaN(dataFim.getTime())) return false;
+
+    return Date.now() > dataFim.getTime() + 48 * 60 * 60 * 1000;
+  })();
+
   // Estados para exclusão personalizada de recorrência
   const [isCustomDelete, setIsCustomDelete] = useState<boolean>(false);
   const [selectedSessionsToDelete, setSelectedSessionsToDelete] = useState<
@@ -3378,10 +3396,16 @@ const Calendar: React.FC = () => {
                 <button
                   onClick={openModalCheckIn}
                   type="button"
-                  disabled={buttonsDisabled}
-                  title={buttonsDisabled ? "Evento encerrado — edição bloqueada para este perfil" : undefined}
+                  disabled={buttonsDisabled || checkInBloqueado48h}
+                  title={
+                    checkInBloqueado48h
+                      ? "Não é possível fazer check-in após 48h do fim do atendimento"
+                      : buttonsDisabled
+                        ? "Evento encerrado — edição bloqueada para este perfil"
+                        : undefined
+                  }
                   className={`flex w-full justify-center rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto ${
-                    buttonsDisabled
+                    buttonsDisabled || checkInBloqueado48h
                       ? "border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500"
                       : "border-green-500 bg-green-500 text-white hover:bg-green-600"
                   }`}
