@@ -636,10 +636,9 @@ export default function FormEmployee({
                       setFormData((prev) => ({
                         ...prev,
                         createUser: checked,
-                        // Ao marcar, auto-preenche usuário (nome+sobrenome),
-                        // uma senha válida e o e-mail da empresa (vindo do
-                        // campo E-mail do cadastro), se ainda estiverem vazios.
-                        // Campos continuam editáveis.
+                        // Ao marcar, auto-preenche usuário (nome+sobrenome) e
+                        // uma senha válida, se ainda estiverem vazios. Campos
+                        // continuam editáveis.
                         userName:
                           checked && !prev.userName
                             ? gerarUsername(prev.nome ?? "")
@@ -648,10 +647,6 @@ export default function FormEmployee({
                           checked && !prev.password
                             ? gerarSenha()
                             : prev.password,
-                        emailUser:
-                          checked && !prev.emailUser
-                            ? prev.email ?? ""
-                            : prev.emailUser,
                       }));
                     }}
                     className="dark:bg-dark-900"
