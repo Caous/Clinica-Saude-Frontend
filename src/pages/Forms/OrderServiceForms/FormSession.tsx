@@ -26,7 +26,7 @@ interface FormSessionProps {
     onCalendarRefresh?: () => void;
 }
 
-export default function FormSession({ clienteId, closeModal, onSuccess, onCalendarRefresh }: FormSessionProps) {
+export default function FormSession({ clienteId, scheduleData, closeModal, onSuccess, onCalendarRefresh }: FormSessionProps) {
     const [historicoTemp, setHistoricoTemp] = useState("");
 
     const getCurrentTime = () => {
@@ -45,6 +45,41 @@ export default function FormSession({ clienteId, closeModal, onSuccess, onCalend
         statusSessao: ESessionStatus.Realizada,
         tipoCheckIn: ETipoCheckIn.Fisio  // Check-in do fisioterapeuta: apenas informativo
     });
+
+    // Quando aberto a partir de um evento da agenda, a Data/Hora da sessão são
+    // preenchidas com a Data & Hora Fim do evento. Sem evento, mantém data/hora
+    // atual (já definidas no estado inicial). Os campos ficam ocultos no form.
+    useEffect(() => {
+        if (!scheduleData?.dataFim) return;
+
+        const iso = String(scheduleData.dataFim); // ex: "2026-06-03T10:00:00"
+        let dataSessao = "";
+        let horaSessao = "";
+
+        if (iso.includes("T")) {
+            const [datePart, timePart] = iso.split("T");
+            dataSessao = datePart;
+            horaSessao = (timePart ?? "").slice(0, 5);
+        } else {
+            const dt = new Date(iso);
+            if (!isNaN(dt.getTime())) {
+                const yyyy = dt.getFullYear();
+                const mm = String(dt.getMonth() + 1).padStart(2, "0");
+                const dd = String(dt.getDate()).padStart(2, "0");
+                dataSessao = `${yyyy}-${mm}-${dd}`;
+                horaSessao = `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+            }
+        }
+
+        if (dataSessao || horaSessao) {
+            setFormData((prev) => ({
+                ...prev,
+                dataSessao: dataSessao || prev.dataSessao,
+                horaSessao: horaSessao || prev.horaSessao,
+            }));
+        }
+    }, [scheduleData]);
+
     const [showHistorico, setShowHistorico] = useState(false);
     const [showSessaoHistorico, setShowSessao] = useState(false);
     const [historicos, setHistoricos] = useState<HistoryCustomerResponseDto[]>([]);
@@ -401,30 +436,8 @@ export default function FormSession({ clienteId, closeModal, onSuccess, onCalend
                                         required={true}
                                     />
                                 </div>
-                                <div>
-                                    <Label>Data da Sessão</Label>
-                                    <Input
-                                        type="date"
-                                        value={formData.dataSessao}
-                                        onChange={(e) => setFormData({ ...formData, dataSessao: e.target.value })}
-                                        placeholder="Data da sessão"
-                                    />
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        Se não informada, será utilizada a data atual
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label>Hora da Sessão</Label>
-                                    <Input
-                                        type="time"
-                                        value={formData.horaSessao}
-                                        onChange={(e) => setFormData({ ...formData, horaSessao: e.target.value })}
-                                        placeholder="Hora da sessão"
-                                    />
-                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        Se não informada, será utilizada a hora atual
-                                    </p>
-                                </div>
+                                {/* Data e Hora da Sessão são preenchidas automaticamente
+                                    (Data & Hora Fim do evento, ou data/hora atual) e ficam ocultas. */}
                             </div>
                             <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-1">
                                 <div>
