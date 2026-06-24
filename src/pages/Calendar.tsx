@@ -189,9 +189,15 @@ const Calendar: React.FC = () => {
     EScheduleStatus.CanceladoPeloProfissional,
     EScheduleStatus.CanceladoPeloPaciente,
   ];
+  // IMPORTANTE: o bloqueio é avaliado pelo status ORIGINAL/persistido do
+  // evento (currentEventData.status), e não pelo status selecionado no
+  // dropdown. Caso contrário, ao escolher "Finalizado" no select, o botão
+  // "Atualizar" desabilitava e impedia justamente salvar a transição.
+  const statusOriginalEvento =
+    currentEventData?.status ?? selectedStatus;
   const eventoEncerrado =
     selectedEvent != null &&
-    STATUSES_BLOQUEADOS.includes(selectedStatus as EScheduleStatus);
+    STATUSES_BLOQUEADOS.includes(statusOriginalEvento as EScheduleStatus);
   const buttonsDisabled = eventoEncerrado && !isAdministrador;
 
   // Regra das 48h: o perfil Fisioterapeuta não pode iniciar check-in após 48h
