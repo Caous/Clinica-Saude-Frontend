@@ -208,16 +208,20 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         };
     }, [ordemSelecionada]);
 
-    // Verificar se já existe check-in neste plano neste dia
+    // Verificar se já existe check-in DO MESMO TIPO neste plano neste dia.
+    // Fisio e Plano são independentes: um check-in Plano (baixa admin) não
+    // bloqueia o check-in Fisio do fisioterapeuta no mesmo dia/OS (e vice-versa).
     const jaFezCheckInNestePlanoDia = useMemo(() => {
         if (!formData.orderServiceId || !formData.dataSessao) return false;
         return sessions.some((s) => {
             const sessaoDate = typeof s.dataSessao === "string"
                 ? s.dataSessao.split("T")[0]
                 : "";
-            return sessaoDate === formData.dataSessao && s.orderServiceId === formData.orderServiceId;
+            return sessaoDate === formData.dataSessao
+                && s.orderServiceId === formData.orderServiceId
+                && s.tipoCheckIn === tipoCheckInFixo;
         });
-    }, [sessions, formData.orderServiceId, formData.dataSessao]);
+    }, [sessions, formData.orderServiceId, formData.dataSessao, tipoCheckInFixo]);
 
     // Regra das 48hrs: o perfil Fisioterapeuta não pode fazer check-in após
     // 48h do fim do atendimento (Data & Hora Fim do agendamento selecionado).

@@ -212,6 +212,22 @@ const Calendar: React.FC = () => {
     return Date.now() > dataFim.getTime() + 48 * 60 * 60 * 1000;
   })();
 
+  const isFisioterapeutaUser = (() => {
+    const rolesToken = getUserRoleFromToken(localStorage.getItem("token"));
+    return (
+      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) &&
+      !userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA)
+    );
+  })();
+
+  // Botão de Check-in:
+  // - Fisioterapeuta pode fazer check-in mesmo com o evento já encerrado
+  //   (ex: baixa administrativa feita antes), desde que dentro das 48h.
+  // - Demais perfis seguem a regra de evento encerrado (buttonsDisabled).
+  const checkInButtonDisabled = isFisioterapeutaUser
+    ? checkInBloqueado48h
+    : buttonsDisabled;
+
   // Estados para exclusão personalizada de recorrência
   const [isCustomDelete, setIsCustomDelete] = useState<boolean>(false);
   const [selectedSessionsToDelete, setSelectedSessionsToDelete] = useState<
@@ -3396,16 +3412,16 @@ const Calendar: React.FC = () => {
                 <button
                   onClick={openModalCheckIn}
                   type="button"
-                  disabled={buttonsDisabled || checkInBloqueado48h}
+                  disabled={checkInButtonDisabled}
                   title={
                     checkInBloqueado48h
                       ? "Não é possível fazer check-in após 48h do fim do atendimento"
-                      : buttonsDisabled
+                      : checkInButtonDisabled
                         ? "Evento encerrado — edição bloqueada para este perfil"
                         : undefined
                   }
                   className={`flex w-full justify-center rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto ${
-                    buttonsDisabled || checkInBloqueado48h
+                    checkInButtonDisabled
                       ? "border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500"
                       : "border-green-500 bg-green-500 text-white hover:bg-green-600"
                   }`}
