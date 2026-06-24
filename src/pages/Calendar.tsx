@@ -135,6 +135,7 @@ const Calendar: React.FC = () => {
   const [filter, setFilter] = useState<Filter>({});
   const [idDeleteRegister, setIdDeleteRegister] = useState<string>("");
   const [userRole, setUserRole] = useState<string | string[] | null>(null);
+
   const [currentEventData, setCurrentEventData] = useState<any>(null);
   const [selectedClienteData, setSelectedClienteData] =
     useState<CustomerResponseDto | null>(null);
@@ -175,6 +176,66 @@ const Calendar: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<number>(
     EScheduleStatus.AConfirmar,
   );
+
+  // Perfil Administrador pode editar mesmo em status finais
+  const isAdministrador = Array.isArray(userRole)
+    ? userRole.includes("Administrador")
+    : userRole === "Administrador";
+
+  // Status que bloqueiam edição/check-in para não-admins
+  const STATUSES_BLOQUEADOS = [
+    EScheduleStatus.Faltou,
+    EScheduleStatus.Finalizado,
+    EScheduleStatus.CanceladoPeloProfissional,
+    EScheduleStatus.CanceladoPeloPaciente,
+  ];
+  const eventoEncerrado =
+    selectedEvent != null &&
+    STATUSES_BLOQUEADOS.includes(selectedStatus as EScheduleStatus);
+  const buttonsDisabled = eventoEncerrado && !isAdministrador;
+
+  // Regra das 48h: o perfil Fisioterapeuta não pode iniciar check-in após 48h
+  // do fim do atendimento (Data & Hora Fim do evento). Bloqueia já o botão que
+  // abre o modal de check-in. Não se aplica a Coordenador/Admin/Administrativo.
+  const checkInBloqueado48h = (() => {
+    const rolesToken = getUserRoleFromToken(localStorage.getItem("token"));
+    const isFisioterapeuta =
+      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) &&
+      !userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
+    if (!isFisioterapeuta) return false;
+
+    const dataFimEvento = currentEventData?.dataFim;
+    if (!dataFimEvento) return false;
+    const dataFim = new Date(dataFimEvento);
+    if (isNaN(dataFim.getTime())) return false;
+
+    return Date.now() > dataFim.getTime() + 48 * 60 * 60 * 1000;
+  })();
+
+  const isFisioterapeutaUser = (() => {
+    const rolesToken = getUserRoleFromToken(localStorage.getItem("token"));
+    return (
+      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) &&
+      !userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA)
+    );
+  })();
+
+  // Fisioterapeuta já registrou check-in (tipo Fisio) para este dia/evento?
+  const checkInFisioJaFeito =
+    isFisioterapeutaUser &&
+    Array.isArray(currentEventData?.checkIns) &&
+    currentEventData.checkIns.some(
+      (c: any) => c.tipoCheckIn === ETipoCheckIn.Fisio,
+    );
+
+  // Botão de Check-in:
+  // - Fisioterapeuta pode fazer check-in mesmo com o evento já encerrado
+  //   (ex: baixa administrativa feita antes), desde que dentro das 48h e
+  //   desde que ainda não tenha feito o check-in Fisio neste dia.
+  // - Demais perfis seguem a regra de evento encerrado (buttonsDisabled).
+  const checkInButtonDisabled = isFisioterapeutaUser
+    ? checkInBloqueado48h || checkInFisioJaFeito
+    : buttonsDisabled;
 
   // Estados para exclusão personalizada de recorrência
   const [isCustomDelete, setIsCustomDelete] = useState<boolean>(false);
@@ -791,19 +852,6 @@ const Calendar: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Carrega check-ins (sessões) do período visível para marcar eventos com
-  // check-in do fisioterapeuta (ícone 🚀)
-  const { data: sessoesCalendario } = useQuery({
-    queryKey: ["sessoes-calendario", filter.data, filter.dataFim],
-    queryFn: () =>
-      getAllSessionsAsync({ dataInicio: filter.data, dataFim: filter.dataFim }),
-    enabled: !!filter.data && !!filter.dataFim,
-    retry: 3,
-    retryDelay: 30000,
-    staleTime: 0,
-    cacheTime: 0,
-  });
-
   const { data: filiaisData, isError: isErrorFiliais } = useQuery({
     queryKey: ["filiais"],
     queryFn: () => BranchOfficeService.getAll(),
@@ -833,28 +881,6 @@ const Calendar: React.FC = () => {
       : [];
     const clientesArray = Array.isArray(clientesData) ? clientesData : [];
     const filiaisArray = Array.isArray(filiaisData) ? filiaisData : [];
-
-    // Normaliza data (Date ou string) para chave YYYY-MM-DD
-    const toDateKey = (value: string | Date | undefined | null): string => {
-      if (!value) return "";
-      const d = typeof value === "string" ? new Date(value) : value;
-      if (isNaN(d.getTime())) {
-        // string já no formato YYYY-MM-DD
-        return typeof value === "string" ? value.substring(0, 10) : "";
-      }
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    // Conjunto de chaves clienteId|data com check-in do fisioterapeuta (🚀)
-    const sessoesArray = Array.isArray(sessoesCalendario) ? sessoesCalendario : [];
-    const checkInFisioKeys = new Set<string>(
-      sessoesArray
-        .filter((s) => s.tipoCheckIn === ETipoCheckIn.Fisio && s.clienteId)
-        .map((s) => `${s.clienteId}|${toDateKey(s.dataSessao)}`),
-    );
 
     // Cria o map de id do funcionário para cor
     const funcionarioColorMap = funcionariosArray.reduce(
@@ -915,13 +941,11 @@ const Calendar: React.FC = () => {
           (f: any) => f.id === schedule.filialId,
         );
 
-        // Evento teve cliente e o fisioterapeuta fez check-in nesse dia → 🚀
-        const clienteIdEvento = schedule.clienteId || schedule.idCliente;
-        const temCheckInFisio = !!(
-          clienteIdEvento &&
-          checkInFisioKeys.has(
-            `${clienteIdEvento}|${toDateKey(schedule.dataInicio)}`,
-          )
+        // Evento teve cliente e há check-in tipo Fisio no mesmo dia → 🚀
+        // checkIns vem embutido no response do agendamento (backend já casa
+        // por cliente + dia do agendamento).
+        const temCheckInFisio = (schedule.checkIns ?? []).some(
+          (c) => c.tipoCheckIn === ETipoCheckIn.Fisio,
         );
 
         const funcionarioIdToUse =
@@ -1019,7 +1043,6 @@ const Calendar: React.FC = () => {
     funcionariosData,
     clientesData,
     filiaisData,
-    sessoesCalendario,
     filterCliente,
     filterStatus,
     selectedFuncionario,
@@ -1513,8 +1536,8 @@ const Calendar: React.FC = () => {
         // Buscar todas as sessões da recorrência para exibir na tabela
         try {
           const filterAllSessions: Filter = {
-            idCliente: currentEventData.clienteId,
-            idFuncionario: currentEventData.funcionarioId,
+            idCliente: currentEventData.idCliente ?? currentEventData.clienteId,
+            idFuncionario: currentEventData.idFuncionario ?? currentEventData.funcionarioId,
           };
 
           const allSchedules = await getAllSchedulesAsync(filterAllSessions);
@@ -1623,8 +1646,8 @@ const Calendar: React.FC = () => {
       // Buscar TODAS as sessões do cliente + fisioterapeuta direto da API
       // sem limitação de data, para pegar sessões em qualquer período
       const filterAllSessions: Filter = {
-        idCliente: currentEventData.clienteId,
-        idFuncionario: currentEventData.funcionarioId,
+        idCliente: currentEventData.idCliente ?? currentEventData.clienteId,
+        idFuncionario: currentEventData.idFuncionario ?? currentEventData.funcionarioId,
       };
 
       const allSchedules = await getAllSchedulesAsync(filterAllSessions);
@@ -1651,39 +1674,42 @@ const Calendar: React.FC = () => {
 
       if (allSessions.length === 0) {
         toast.error("Nenhuma sessão da recorrência encontrada.");
+        queryClient.invalidateQueries({ queryKey: ["schedules"] });
+        refetchCalendar();
+        resetModalFields();
         return;
       }
 
-      // Deletar todas as sessões da recorrência
-      const deletePromises = allSessions.map((session: any) =>
-        disableScheduleAsync(session.id),
+      // Deletar todas as sessões — allSettled: não rejeita em falha parcial
+      const results = await Promise.allSettled(
+        allSessions.map((session: any) => disableScheduleAsync(session.id)),
       );
 
-      const results = await Promise.all(deletePromises);
-      const successfulDeletes = results.filter(
-        (result) => result?.status === 200,
-      );
+      const successCount = results.filter(
+        (r) => r.status === "fulfilled" && (r.value as any)?.status === 200,
+      ).length;
+      const failCount = allSessions.length - successCount;
 
-      if (successfulDeletes.length === allSessions.length) {
+      // Toast antes do refetch para garantir visibilidade
+      if (failCount === 0) {
         toast.success(
-          `${allSessions.length} sessões da recorrência excluídas com sucesso!`,
+          `${successCount} sessão(ões) da recorrência excluída(s) com sucesso!`,
         );
       } else {
         toast.error(
-          `Apenas ${successfulDeletes.length} de ${allSessions.length} sessões foram excluídas.`,
+          `${successCount} excluída(s), ${failCount} falhou(aram). Verifique o calendário.`,
         );
       }
 
-      // Invalidar todas as queries de schedules para limpar cache de todas as datas
+      // Invalidar cache e recarregar eventos do calendário
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      await refetchCalendar();
+      refetchCalendar();
       resetModalFields();
     } catch (error) {
       console.error("Erro ao deletar recorrência:", error);
       toast.error("Erro ao excluir recorrência. Verifique o calendário.");
-      // Invalidar queries mesmo em caso de erro para garantir dados atualizados
       queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      await refetchCalendar();
+      refetchCalendar();
       resetModalFields();
     }
   };
@@ -3381,6 +3407,11 @@ const Calendar: React.FC = () => {
               </div>
               {/* Fim do container com scroll */}
             </div>
+            {selectedEvent && selectedCliente && checkInFisioJaFeito && (
+              <p className="mt-4 text-sm text-red-500 text-center sm:text-right">
+                Você já fez check-in para este paciente neste dia.
+              </p>
+            )}
             <div className="flex items-center gap-3 mt-6 modal-footer sm:justify-end">
               <button
                 onClick={closeModal}
@@ -3395,7 +3426,21 @@ const Calendar: React.FC = () => {
                 <button
                   onClick={openModalCheckIn}
                   type="button"
-                  className="flex w-full justify-center rounded-lg border border-green-500 bg-green-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-600 sm:w-auto"
+                  disabled={checkInButtonDisabled}
+                  title={
+                    checkInFisioJaFeito
+                      ? "Você já fez check-in para este paciente neste dia"
+                      : checkInBloqueado48h
+                        ? "Não é possível fazer check-in após 48h do fim do atendimento"
+                        : checkInButtonDisabled
+                          ? "Evento encerrado — edição bloqueada para este perfil"
+                          : undefined
+                  }
+                  className={`flex w-full justify-center rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto ${
+                    checkInButtonDisabled
+                      ? "border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500"
+                      : "border-green-500 bg-green-500 text-white hover:bg-green-600"
+                  }`}
                 >
                   Check-in
                 </button>
@@ -3404,9 +3449,10 @@ const Calendar: React.FC = () => {
               <button
                 onClick={handleAddOrUpdateEvent}
                 type="button"
-                disabled={isSaving}
+                disabled={isSaving || buttonsDisabled}
+                title={buttonsDisabled ? "Evento encerrado — edição bloqueada para este perfil" : undefined}
                 className={`btn btn-success btn-update-event flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-white sm:w-auto ${
-                  isSaving
+                  isSaving || buttonsDisabled
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-brand-500 hover:bg-brand-600"
                 }`}
@@ -3449,7 +3495,6 @@ const Calendar: React.FC = () => {
               </button>
             </div>
           </div>
-          <Toaster position="bottom-right" />
         </Modal>
 
         {/* Modal de Check-in / Sessão de Fisioterapia */}
@@ -3785,7 +3830,6 @@ const Calendar: React.FC = () => {
               </div>
             </form>
           </div>
-          <Toaster position="bottom-right" />
          </Modal>
 
         {/* Modal de Confirmação Severa para Exclusão Total de Recorrência */}
@@ -3889,6 +3933,9 @@ const Calendar: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Toaster no nível raiz com z-index acima do modal (z-99999) */}
+      <Toaster position="bottom-right" containerStyle={{ zIndex: 999999 }} />
     </>
   );
 };

@@ -245,6 +245,22 @@ export default function SessionsGrid() {
             />
           </div>
 
+          {/* Tipo de Check-in */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo
+            </label>
+            <select
+              value={tipoCheckIn}
+              onChange={(e) => setTipoCheckIn(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            >
+              <option value="">Todos</option>
+              <option value={String(ETipoCheckIn.Fisio)}>Fisio</option>
+              <option value={String(ETipoCheckIn.Plano)}>Plano</option>
+            </select>
+          </div>
+
           {/* Ordem de Serviço */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -330,6 +346,12 @@ export default function SessionsGrid() {
                         isHeader
                         className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
                       >
+                        Tipo
+                      </TableCell>
+                      <TableCell
+                        isHeader
+                        className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
+                      >
                         Observação
                       </TableCell>
                       <TableCell
@@ -375,6 +397,14 @@ export default function SessionsGrid() {
                             color={getStatusColor(session.statusSessao) as any}
                           >
                             {getStatusLabel(session.statusSessao)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-start">
+                          <Badge
+                            size="sm"
+                            color={session.tipoCheckIn === ETipoCheckIn.Fisio ? "info" : "success"}
+                          >
+                            {getTipoCheckInLabel(session.tipoCheckIn ?? ETipoCheckIn.Plano)}
                           </Badge>
                         </TableCell>
                         <TableCell className="px-4 py-3 text-start">

@@ -19,6 +19,7 @@ import {
   DashboardServicoReceitaResponseDto,
 } from '../model/dashboard.types';
 import { DashboardPathologyResponseDto } from '../model/Dto/Response/DashboardPathologyResponseDto';
+import { DashboardClientesPorFilialResponseDto } from '../model/Dto/Response/DashboardClientesPorFilialResponseDto';
 
 class DashboardService {
   private baseUrl = '/Dashboard';
@@ -240,6 +241,23 @@ class DashboardService {
   }
 
   /**
+   * Comparativo mensal: check-ins Fisio (produtividade) vs baixas Plano (consumo paciente)
+   */
+  async getSessoesComparativoFisioPlano(
+    filter: DashboardFilterRequestDto = {}
+  ): Promise<Record<string, Record<string, number>>> {
+    const params = new URLSearchParams();
+    if (filter.dataInicio) params.append('dataInicio', filter.dataInicio);
+    if (filter.dataFim) params.append('dataFim', filter.dataFim);
+    if (filter.filialId) params.append('filialId', filter.filialId);
+
+    const response = await instanceApi.get(
+      `${this.baseUrl}/sessoes-comparativo-fisio-plano?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
    * Retorna as patologias dos clientes agrupadas por quantidade
    */
   async getPatologiasAgrupadas(
@@ -255,6 +273,16 @@ class DashboardService {
 
     const response = await instanceApi.get(
       `${this.baseUrl}/patologias-agrupadas?${params.toString()}`
+    );
+    return response.data || [];
+  }
+
+  /**
+   * Quantidade de clientes por filial (gráfico de pizza)
+   */
+  async getClientesPorFilial(): Promise<DashboardClientesPorFilialResponseDto[]> {
+    const response = await instanceApi.get(
+      `${this.baseUrl}/clientes-por-filial`
     );
     return response.data || [];
   }

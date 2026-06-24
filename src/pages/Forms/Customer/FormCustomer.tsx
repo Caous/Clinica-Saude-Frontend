@@ -5,9 +5,10 @@ import Label from "../../../components/form/Label";
 import Select from "../../../components/form/Select";
 import Checkbox from "../../../components/form/input/Checkbox";
 import { CustomerRequestDto, HistoryCustomerRequestDto } from "../../../services/model/Dto/Request/CustomerRequestDto";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
 import { postCustomerAsync, putCustomerAsync } from "../../../services/service/CustomerService";
+import { BranchOfficeService } from "../../../services/service/BranchOfficeService";
 import toast, { Toaster } from "react-hot-toast";
 import InputMask from "react-input-mask";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../../components/ui/table";
@@ -68,10 +69,23 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
     estrangeiro: data?.estrangeiro ?? false,
     documentoIdentificacao: data?.documentoIdentificacao ?? "",
     status: data?.status ?? 0,
+    filialId: data?.filialId ?? undefined,
     historico: data?.historico ?? [],
   });
   const [showHistorico, setShowHistorico] = useState(false);
   const queryClient = useQueryClient();
+
+  // Filiais para o vínculo opcional do paciente
+  const { data: filiaisData } = useQuery({
+    queryKey: ["filiais"],
+    queryFn: () => BranchOfficeService.getAll(),
+    retry: 3,
+    retryDelay: 30000,
+  });
+
+  const optionsFilial = Array.isArray(filiaisData)
+    ? filiaisData.map((f) => ({ value: f.id ?? "", label: f.nomeFilial }))
+    : [];
 
   const mutation = useMutation({
     mutationFn: edit ? putCustomerAsync : postCustomerAsync,
@@ -152,6 +166,7 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
         estrangeiro: data.estrangeiro ?? false,
         documentoIdentificacao: data.documentoIdentificacao ?? "",
         status: data.status ?? 0,
+        filialId: data.filialId ?? undefined,
         historico: data.historico ?? [],
         endereco: {
           rua: data.endereco?.rua || "",
@@ -167,6 +182,12 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Filial é obrigatória no formulário (no banco continua opcional/nullable)
+    if (!formData.filialId) {
+      toast.error("Selecione a Unidade / Filial do paciente.", { duration: 4000 });
+      return;
+    }
 
     // Converter data de DD/MM/YYYY para YYYY-MM-DD se necessário
     let dataNascimentoISO = formData.dataNascimento;
@@ -416,6 +437,17 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
                     placeholder="Selecione uma patologia"
                     onChange={(value) => setFormData(prev => ({ ...prev, patologia: value || undefined }))}
                     className="dark:bg-dark-900"
+                  />
+                </div>
+                <div>
+                  <Label>Unidade / Filial<span className="text-red-300">*</span></Label>
+                  <Select
+                    options={optionsFilial}
+                    value={formData.filialId ?? ""}
+                    placeholder="Selecione uma filial"
+                    onChange={(value) => setFormData(prev => ({ ...prev, filialId: value || undefined }))}
+                    className="dark:bg-dark-900"
+                    required={true}
                   />
                 </div>
               </div>

@@ -24,4 +24,13 @@ export interface ScheduleResponseDto extends BaseResponseDto {
   status: number;
   corFuncionario?: string;
   isAvaliacao?: boolean;
+  checkIns?: ScheduleCheckInDto[] | null;
+}
+
+export interface ScheduleCheckInDto {
+  dataSessao: string;
+  horaSessao: string;
+  statusSessao: number;
+  tipoCheckIn: number; // 0 = Fisio, 1 = Plano
+  funcionario?: string | null;
 }
