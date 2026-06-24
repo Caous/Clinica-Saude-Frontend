@@ -83,12 +83,9 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
     retryDelay: 30000,
   });
 
-  const optionsFilial = [
-    { value: "", label: "Sem filial" },
-    ...(Array.isArray(filiaisData)
-      ? filiaisData.map((f) => ({ value: f.id ?? "", label: f.nomeFilial }))
-      : []),
-  ];
+  const optionsFilial = Array.isArray(filiaisData)
+    ? filiaisData.map((f) => ({ value: f.id ?? "", label: f.nomeFilial }))
+    : [];
 
   const mutation = useMutation({
     mutationFn: edit ? putCustomerAsync : postCustomerAsync,
@@ -185,6 +182,12 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Filial é obrigatória no formulário (no banco continua opcional/nullable)
+    if (!formData.filialId) {
+      toast.error("Selecione a Unidade / Filial do paciente.", { duration: 4000 });
+      return;
+    }
 
     // Converter data de DD/MM/YYYY para YYYY-MM-DD se necessário
     let dataNascimentoISO = formData.dataNascimento;
@@ -437,13 +440,14 @@ export default function FormCustomer({ data, edit, closeModal, onSuccess }: Form
                   />
                 </div>
                 <div>
-                  <Label>Unidade / Filial</Label>
+                  <Label>Unidade / Filial<span className="text-red-300">*</span></Label>
                   <Select
                     options={optionsFilial}
                     value={formData.filialId ?? ""}
-                    placeholder="Selecione uma filial (opcional)"
+                    placeholder="Selecione uma filial"
                     onChange={(value) => setFormData(prev => ({ ...prev, filialId: value || undefined }))}
                     className="dark:bg-dark-900"
+                    required={true}
                   />
                 </div>
               </div>
