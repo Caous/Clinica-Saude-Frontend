@@ -15,6 +15,7 @@ import FisioterapeutasBarChart from "../../components/ecommerce/FisioterapeutasB
 import FisioVsPlanoBarChart from "../../components/ecommerce/FisioVsPlanoBarChart";
 import ServicosPieChart from "../../components/ecommerce/ServicosPieChart";
 import PatologiasPieChart from "../../components/ecommerce/PatologiasPieChart";
+import ClientesPorFilialPieChart from "../../components/ecommerce/ClientesPorFilialPieChart";
 import DashboardFilters, { DashboardFilterValues } from "../../components/common/DashboardFilters";
 import { useDashboard } from "../../hooks/useDashboard";
 import { useState } from "react";
@@ -41,6 +42,7 @@ export default function DashboardOperacao() {
     sessoesPorFisioterapeuta,
     sessoesComparativoFisioPlano,
     patologiasAgrupadas,
+    clientesPorFilial,
     loading,
     error,
     isLoading,
@@ -383,6 +385,12 @@ export default function DashboardOperacao() {
           <div>
             <PatologiasPieChart
               data={patologiasAgrupadas}
+              loading={loading.graficos}
+            />
+          </div>
+          <div>
+            <ClientesPorFilialPieChart
+              data={clientesPorFilial}
               loading={loading.graficos}
             />
           </div>

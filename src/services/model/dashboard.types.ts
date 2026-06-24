@@ -93,7 +93,8 @@ export interface DashboardState {
   sessoesPorFisioterapeuta: DashboardPhysiotherapistSessionsResponse[];
   sessoesComparativoFisioPlano: Record<string, Record<string, number>>;
   patologiasAgrupadas: import('./Dto/Response/DashboardPathologyResponseDto').DashboardPathologyResponseDto[];
-  
+  clientesPorFilial: import('./Dto/Response/DashboardClientesPorFilialResponseDto').DashboardClientesPorFilialResponseDto[];
+
   // Estados de loading
   loading: {
     pacientesAtivos: boolean;

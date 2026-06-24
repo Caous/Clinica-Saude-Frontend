@@ -19,6 +19,7 @@ import {
   DashboardServicoReceitaResponseDto,
 } from '../model/dashboard.types';
 import { DashboardPathologyResponseDto } from '../model/Dto/Response/DashboardPathologyResponseDto';
+import { DashboardClientesPorFilialResponseDto } from '../model/Dto/Response/DashboardClientesPorFilialResponseDto';
 
 class DashboardService {
   private baseUrl = '/Dashboard';
@@ -272,6 +273,16 @@ class DashboardService {
 
     const response = await instanceApi.get(
       `${this.baseUrl}/patologias-agrupadas?${params.toString()}`
+    );
+    return response.data || [];
+  }
+
+  /**
+   * Quantidade de clientes por filial (gráfico de pizza)
+   */
+  async getClientesPorFilial(): Promise<DashboardClientesPorFilialResponseDto[]> {
+    const response = await instanceApi.get(
+      `${this.baseUrl}/clientes-por-filial`
     );
     return response.data || [];
   }
