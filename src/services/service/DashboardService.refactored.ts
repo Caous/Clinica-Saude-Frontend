@@ -81,6 +81,18 @@ class DashboardService extends BaseApiService<any, any, any, any> {
     );
   }
 
+  /**
+   * Comparativo mensal: check-ins Fisio (produtividade) vs baixas Plano (consumo paciente)
+   */
+  async getSessoesComparativoFisioPlano(
+    filter?: DashboardFilterRequestDto
+  ): Promise<Record<string, Record<string, number>>> {
+    return this.customGet(
+      `${this.baseUrl}/sessoes-comparativo-fisio-plano`,
+      filter
+    );
+  }
+
   // ========== SERVICE ANALYTICS ==========
 
   async getServicosMaisRequisitados(
