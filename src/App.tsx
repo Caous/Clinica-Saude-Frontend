@@ -18,6 +18,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import DashboardRedirect from "./components/auth/DashboardRedirect";
 import DashboardOperacao from "./pages/Dashboard/DashboardOperacao";
+import Documentacao from "./pages/Documentation/Documentacao";
 import DashboardLead from "./pages/Dashboard/DashboardLead";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
@@ -57,6 +58,7 @@ export default function App() {
         >
           <Route index path="/" element={<DashboardRedirect />} />
           <Route path="/dashboard-operacao" element={<DashboardOperacao />} />
+          <Route path="/documentacao" element={<Documentacao />} />
           
           {/* Dashboard Lead - Sem acesso para Fisioterapeuta e Coordenador Fisioterapeuta */}
           <Route 

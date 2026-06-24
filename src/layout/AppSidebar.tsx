@@ -114,6 +114,13 @@ const allNavItems: NavItem[] = [
     permissions: MENU_PERMISSIONS.FUNCIONARIOS,
   },
   {
+    // Sem permissões: visível a todos os usuários logados.
+    // O conteúdo da página é filtrado por perfil.
+    icon: <DocsIcon />,
+    name: "Documentação",
+    path: "/documentacao",
+  },
+  {
     icon: <DollarLineIcon />,
     name: "Financeiro",
     permissions: MENU_PERMISSIONS.FINANCEIRO,
