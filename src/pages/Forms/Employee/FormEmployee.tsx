@@ -289,6 +289,54 @@ export default function FormEmployee({
     }
   };
 
+  // Gera um username a partir do nome: primeiro + último nome, sem acentos/espaços.
+  // Ex: "Gustavo Rozario Nascimento" -> "GustavoNascimento"
+  const gerarUsername = (nome: string): string => {
+    const limpar = (s: string) =>
+      s
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-zA-Z0-9]/g, "");
+    const partes = (nome ?? "").trim().split(/\s+/).filter(Boolean);
+    if (partes.length === 0) return "";
+    const primeiro = limpar(partes[0]);
+    const ultimo = partes.length > 1 ? limpar(partes[partes.length - 1]) : "";
+    return primeiro + ultimo;
+  };
+
+  // Inteiro aleatório em [0, max) usando CSPRNG (crypto.getRandomValues),
+  // com rejeição para evitar viés de módulo. Math.random não é
+  // criptograficamente seguro (previsível), por isso não é usado aqui.
+  const randomInt = (max: number): number => {
+    const limite = Math.floor(0xffffffff / max) * max;
+    const buffer = new Uint32Array(1);
+    let valor = 0;
+    do {
+      crypto.getRandomValues(buffer);
+      valor = buffer[0];
+    } while (valor >= limite);
+    return valor % max;
+  };
+
+  // Gera senha que atende às regras do Identity: maiúscula, minúscula,
+  // dígito e tamanho mínimo (>= 6). Inclui também um caractere especial.
+  const gerarSenha = (): string => {
+    const maiusc = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const minusc = "abcdefghijkmnpqrstuvwxyz";
+    const digitos = "23456789";
+    const especiais = "@#$_";
+    const pick = (s: string) => s[randomInt(s.length)];
+    const todos = maiusc + minusc + digitos;
+    const chars = [pick(maiusc), pick(minusc), pick(digitos), pick(especiais)];
+    for (let i = 0; i < 6; i++) chars.push(pick(todos));
+    // Embaralhamento Fisher-Yates com CSPRNG
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    return chars.join("");
+  };
+
   const handleChange = (
     eventOrName: React.ChangeEvent<HTMLInputElement> | string,
     manualValue?: string
@@ -588,6 +636,22 @@ export default function FormEmployee({
                       setFormData((prev) => ({
                         ...prev,
                         createUser: checked,
+                        // Ao marcar, auto-preenche usuário (nome+sobrenome),
+                        // uma senha válida e o e-mail da empresa (vindo do
+                        // campo E-mail do cadastro), se ainda estiverem vazios.
+                        // Campos continuam editáveis.
+                        userName:
+                          checked && !prev.userName
+                            ? gerarUsername(prev.nome ?? "")
+                            : prev.userName,
+                        password:
+                          checked && !prev.password
+                            ? gerarSenha()
+                            : prev.password,
+                        emailUser:
+                          checked && !prev.emailUser
+                            ? prev.email ?? ""
+                            : prev.emailUser,
                       }));
                     }}
                     className="dark:bg-dark-900"
