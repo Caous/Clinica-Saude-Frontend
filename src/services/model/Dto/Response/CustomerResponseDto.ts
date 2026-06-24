@@ -38,6 +38,8 @@ export interface CustomerResponseDto extends BaseResponseDto {
   estrangeiro: boolean;
   documentoIdentificacao?: string;
   status: number;
+  filialId?: string | null;
+  nomeFilial?: string | null;
   historico?: HistoryCustomerResponseDto[];
   servicos?: OrderServiceResponseDto[];
   sessoes?: OrderServiceSessionResponseDto[];

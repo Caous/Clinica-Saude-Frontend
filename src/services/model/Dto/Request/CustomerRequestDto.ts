@@ -36,6 +36,7 @@ export interface AndressRequestDto {
     estrangeiro: boolean;
     documentoIdentificacao?: string;
     status: number;
+    filialId?: string | null; // Vínculo opcional com a filial/unidade
     historico?: HistoryCustomerRequestDto[]; // Adicionado conforme o DTO C#
     servicos?: OrderServiceRequestDto[]; // Adicionado conforme o DTO C#
   }
