@@ -480,12 +480,11 @@ export default function FormOrderService({
     const fetchData = async () => {
       try {
         const customers = await getAllCustomersSummaryAsync();
-        if (Array.isArray(customers)) {
-          const mappedCustomers = customers.map((c) => ({
-            value: c.id ?? "",
+        if (customers) {
+          setCustomersOptions(customers.map((c) => ({
+            value: c.id,
             label: c.nome,
-          }));
-          setCustomersOptions(mappedCustomers);
+          })));
         }
 
         const services = await getAllSubCategoriasAsync();
