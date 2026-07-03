@@ -2104,8 +2104,10 @@ const Calendar: React.FC = () => {
   };
 
   // Função para recarregar lista de clientes após cadastro
+  // FIX: a query que alimenta o select usa a chave "clientes-summary",
+  // não "clientes" — invalidar a chave errada fazia o select não atualizar.
   const handleReloadClientes = () => {
-    queryClient.invalidateQueries({ queryKey: ["clientes"] });
+    queryClient.invalidateQueries({ queryKey: ["clientes-summary"] });
   };
 
   // Fisioterapeuta e CoordenadorFisioterapeuta só podem alterar o status do agendamento
