@@ -127,14 +127,30 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         },
         onError: async (error: any) => {
             const response = error.response?.data;
+            const status = error.response?.status;
+
+            // Log full error details to console for production debugging
+            console.error("[FormSession] Erro ao criar sessão:", {
+                status,
+                response,
+                originalError: error,
+            });
 
             if (Array.isArray(response)) {
                 response.forEach((err: { errorMensagem: string }) => {
                     toast.error(err.errorMensagem, { duration: 4000 });
                 });
             } else if (response?.error) {
-                // 409 Conflict — mensagem estruturada do backend { error: "..." }
-                toast.error(response.error, { duration: 6000 });
+                // Backend returned structured error { error, detail, innerDetail, stackTrace }
+                const mainMsg = response.error;
+                const detail = response.detail || response.innerDetail;
+                const fullMsg = detail ? `${mainMsg}\n\nDetalhe: ${detail}` : mainMsg;
+
+                if (response.stackTrace) {
+                    console.error("[FormSession] Stack trace do backend:\n", response.stackTrace);
+                }
+
+                toast.error(fullMsg, { duration: 10000 });
             } else if (typeof response === "string") {
                 toast.error(response, { duration: 4000 });
             } else {
