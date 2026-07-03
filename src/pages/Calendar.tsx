@@ -200,15 +200,19 @@ const Calendar: React.FC = () => {
     STATUSES_BLOQUEADOS.includes(statusOriginalEvento as EScheduleStatus);
   const buttonsDisabled = eventoEncerrado && !isAdministrador;
 
-  // Regra das 48h: o perfil Fisioterapeuta não pode iniciar check-in após 48h
-  // do fim do atendimento (Data & Hora Fim do evento). Bloqueia já o botão que
-  // abre o modal de check-in. Não se aplica a Coordenador/Admin/Administrativo.
-  const checkInBloqueado48h = (() => {
+  // Fisioterapeuta OU CoordenadorFisioterapeuta — ambos seguem a regra das 48h
+  const isFisioterapeutaUser = (() => {
     const rolesToken = getUserRoleFromToken(localStorage.getItem("token"));
-    const isFisioterapeuta =
-      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) &&
-      !userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
-    if (!isFisioterapeuta) return false;
+    return (
+      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) ||
+      userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA)
+    );
+  })();
+
+  // Regra das 48h: Fisioterapeuta e CoordenadorFisioterapeuta não podem iniciar
+  // check-in após 48h do fim do atendimento. Bloqueia o botão que abre o modal.
+  const checkInBloqueado48h = (() => {
+    if (!isFisioterapeutaUser) return false;
 
     const dataFimEvento = currentEventData?.dataFim;
     if (!dataFimEvento) return false;
@@ -216,14 +220,6 @@ const Calendar: React.FC = () => {
     if (isNaN(dataFim.getTime())) return false;
 
     return Date.now() > dataFim.getTime() + 48 * 60 * 60 * 1000;
-  })();
-
-  const isFisioterapeutaUser = (() => {
-    const rolesToken = getUserRoleFromToken(localStorage.getItem("token"));
-    return (
-      userHasRole(rolesToken, USER_ROLES.FISIOTERAPEUTA) &&
-      !userHasRole(rolesToken, USER_ROLES.COORDENADOR_FISIOTERAPEUTA)
-    );
   })();
 
   // Fisioterapeuta já registrou check-in (tipo Fisio) para este dia/evento?
