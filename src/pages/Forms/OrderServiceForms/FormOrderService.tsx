@@ -7,9 +7,8 @@ import Select from "../../../components/form/Select";
 import SelectWithSearch from "../../../components/form/SelectWithSearch";
 import MultiSelect from "../../../components/form/MultiSelect";
 import { Option } from "../../../components/form/MultiSelect";
-import { CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
 import { SubCategoryServiceResponseDto } from "../../../services/model/Dto/Response/SubCategoryServiceResponseDto";
-import { getAllCustomersAsync } from "../../../services/service/CustomerService";
+import { getAllCustomersSummaryAsync } from "../../../services/service/CustomerService";
 import { getAllSubCategoriasAsync } from "../../../services/service/SubCategoryService";
 import { EFormaPagamento } from "../../../services/model/Enum/EFormaPagamento";
 import { statusOrderServiceOptions } from "../../../services/model/Constants/StatusOrderService";
@@ -480,13 +479,12 @@ export default function FormOrderService({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const customers = await getAllCustomersAsync();
-        if (Array.isArray(customers)) {
-          const mappedCustomers = customers.map((c: CustomerResponseDto) => ({
-            value: c.id ?? "", // fallback para string vazia se for undefined
+        const customers = await getAllCustomersSummaryAsync();
+        if (customers) {
+          setCustomersOptions(customers.map((c) => ({
+            value: c.id,
             label: c.nome,
-          }));
-          setCustomersOptions(mappedCustomers);
+          })));
         }
 
         const services = await getAllSubCategoriasAsync();
