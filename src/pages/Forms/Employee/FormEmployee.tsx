@@ -4,8 +4,10 @@ import Label from "../../../components/form/Label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast, { Toaster } from "react-hot-toast";
 import EmployeeService from "../../../services/service/EmployeeService";
+import { UserService } from "../../../services/service/UserService";
 import { EmployeeRequestDto } from "../../../services/model/Dto/Request/EmployeeRequestDto";
 import { EmployeeResponseDto } from "../../../services/model/Dto/Response/EmployeeResponseDto";
+import { UserAccessResponseDto } from "../../../services/model/Dto/Response/UserAccessResponseDto";
 import InputMask from "react-input-mask";
 import Select from "../../../components/form/Select";
 import { BranchOfficeService } from "../../../services/service/BranchOfficeService";
@@ -68,6 +70,8 @@ export default function FormEmployee({
 
   const [userConfig, setUserConfig] = useState<boolean>(false);
   const [isAdministrador, setIsAdministrador] = useState<boolean>(false);
+  const [userAccess, setUserAccess] = useState<UserAccessResponseDto | null>(null);
+  const [removingRole, setRemovingRole] = useState<string | null>(null);
   const [formData, setFormData] = useState<EmployeeRequestDto>({
     id: edit && data?.id ? data.id : undefined,
     nome: data?.nome ?? "",
@@ -229,6 +233,24 @@ export default function FormEmployee({
     const isAdmin = userHasRole(userRole, USER_ROLES.ADMINISTRADOR);
     setIsAdministrador(isAdmin);
   }, []);
+
+  // No modo edição, carregar dados de acesso do funcionário (userId, userName, email, roles)
+  useEffect(() => {
+    if (!edit || !data?.id) return;
+
+    UserService.getUserAccessByFuncionarioId(data.id).then((access) => {
+      if (!access) return;
+      setUserAccess(access);
+      setUserConfig(true);
+      setFormData((prev) => ({
+        ...prev,
+        createUser: true,
+        userName: access.userName,
+        emailUser: access.email,
+        role: access.roles[0] ?? prev.role,
+      }));
+    });
+  }, [edit, data?.id]);
 
   useEffect(() => {
     const fetchFiliais = async () => {
@@ -636,9 +658,6 @@ export default function FormEmployee({
                       setFormData((prev) => ({
                         ...prev,
                         createUser: checked,
-                        // Ao marcar, auto-preenche usuário (nome+sobrenome) e
-                        // uma senha válida, se ainda estiverem vazios. Campos
-                        // continuam editáveis.
                         userName:
                           checked && !prev.userName
                             ? gerarUsername(prev.nome ?? "")
@@ -655,6 +674,49 @@ export default function FormEmployee({
                   <span className="block text-sm font-medium text-gray-700 dark:text-gray-400">
                     Configurar acesso ao sistema
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Roles atuais do usuário — exibir somente em edição quando já há usuário vinculado */}
+            {isAdministrador && edit && userAccess && userAccess.roles.length > 0 && (
+              <div className="mb-5">
+                <h5 className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-400">
+                  Perfis atuais
+                </h5>
+                <div className="flex flex-wrap gap-2">
+                  {userAccess.roles.map((role) => (
+                    <span
+                      key={role}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                    >
+                      {role}
+                      <button
+                        type="button"
+                        disabled={removingRole === role}
+                        onClick={async () => {
+                          if (!userAccess.userId) return;
+                          setRemovingRole(role);
+                          const ok = await UserService.removeRole(userAccess.userId, role);
+                          if (ok) {
+                            setUserAccess((prev) =>
+                              prev
+                                ? { ...prev, roles: prev.roles.filter((r) => r !== role) }
+                                : prev
+                            );
+                            toast.success(`Perfil "${role}" removido.`);
+                          } else {
+                            toast.error(`Não foi possível remover o perfil "${role}".`);
+                          }
+                          setRemovingRole(null);
+                        }}
+                        className="ml-0.5 text-blue-600 dark:text-blue-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 transition-colors"
+                        title={`Remover perfil ${role}`}
+                      >
+                        {removingRole === role ? "…" : "✕"}
+                      </button>
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
