@@ -12,12 +12,21 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { LoggerService } from '../services/util/LoggerService';
+import {
+  calculateRecurrenceDates,
+  getDefaultStartFrom,
+  type RecurrenceType,
+} from '../utils/scheduleRecurrence';
 
 interface RecurrenceConfig {
   enabled: boolean;
   selectedDays: string[];
   selectedTime: string;
   numberOfSessions: number;
+  /** Data-base "A partir de" (inclusive). Padrão: dia seguinte ao atual. */
+  startFrom: Date;
+  /** Tipo de recorrência (semanal/quinzenal/mensal). Padrão: semanal. */
+  recurrenceType: RecurrenceType;
   employeeId?: string;
   branchId?: string;
 }
@@ -56,6 +65,8 @@ export function useScheduleRecurrence(initialConfig: Partial<RecurrenceConfig> =
     selectedDays: [],
     selectedTime: '',
     numberOfSessions: 1,
+    startFrom: getDefaultStartFrom(),
+    recurrenceType: 'semanal',
     ...initialConfig,
   });
 
@@ -63,80 +74,48 @@ export function useScheduleRecurrence(initialConfig: Partial<RecurrenceConfig> =
    * Calcular próximas datas com base em dias da semana
    */
   const calculateNextDates = useCallback(
-    (daysOfWeek: string[], count: number, fromTime?: string): CalculatedSchedule[] => {
+    (
+      daysOfWeek: string[],
+      count: number,
+      fromTime?: string,
+      startFrom?: Date,
+      recurrenceType: RecurrenceType = 'semanal'
+    ): CalculatedSchedule[] => {
       try {
-        if (daysOfWeek.length === 0 || count <= 0) {
-          return [];
-        }
+        // Núcleo puro: datas-base da recorrência a partir de "startFrom".
+        const dates = calculateRecurrenceDates({
+          daysOfWeek,
+          count,
+          startFrom: startFrom ?? getDefaultStartFrom(),
+          recurrenceType,
+          time: fromTime,
+        });
 
-        // Converter dias para números
-        const selectedDayNumbers = daysOfWeek
-          .map((day) => DAY_MAP[day])
-          .filter((day) => day !== undefined)
-          .sort((a, b) => a - b);
-
-        if (selectedDayNumbers.length === 0) {
-          return [];
-        }
-
-        const schedules: CalculatedSchedule[] = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const currentDate = new Date(today);
-        let sessionsCreated = 0;
-        let attempts = 0;
-        const maxAttempts = 365; // Máximo 1 ano de procura
-
-        while (sessionsCreated < count && attempts < maxAttempts) {
-          const dayOfWeek = currentDate.getDay();
-
-          // Verificar se o dia atual está na lista de dias selecionados
-          if (selectedDayNumbers.includes(dayOfWeek)) {
-            // Verificar se o horário é válido (não é passado)
-            let isValidTime = true;
-            if (fromTime && currentDate.toDateString() === today.toDateString()) {
-              const [hours, minutes] = fromTime.split(':').map(Number);
-              const nowTime = new Date();
-              const scheduleTime = new Date(currentDate);
-              scheduleTime.setHours(hours, minutes, 0, 0);
-
-              isValidTime = scheduleTime > nowTime;
-            }
-
-            if (isValidTime) {
-              const startDateTime = new Date(currentDate);
-              if (fromTime) {
-                const [hours, minutes] = fromTime.split(':').map(Number);
-                startDateTime.setHours(hours, minutes, 0, 0);
-              } else {
-                startDateTime.setHours(9, 0, 0, 0); // Horário padrão 9:00
-              }
-
-              const endDateTime = new Date(startDateTime);
-              endDateTime.setHours(endDateTime.getHours() + 1); // 1 hora de duração
-
-              schedules.push({
-                date: new Date(currentDate),
-                startDateTime,
-                endDateTime,
-                dayOfWeek: REVERSE_DAY_MAP[dayOfWeek],
-                timeString: fromTime || '09:00',
-              });
-
-              sessionsCreated++;
-            }
+        const schedules: CalculatedSchedule[] = dates.map((currentDate) => {
+          const startDateTime = new Date(currentDate);
+          if (fromTime) {
+            const [hours, minutes] = fromTime.split(':').map(Number);
+            startDateTime.setHours(hours, minutes, 0, 0);
+          } else {
+            startDateTime.setHours(9, 0, 0, 0); // Horário padrão 9:00
           }
 
-          // Avançar para o próximo dia
-          currentDate.setDate(currentDate.getDate() + 1);
-          attempts++;
-        }
+          const endDateTime = new Date(startDateTime);
+          endDateTime.setHours(endDateTime.getHours() + 1); // 1 hora de duração
 
-        if (sessionsCreated < count) {
+          return {
+            date: new Date(currentDate),
+            startDateTime,
+            endDateTime,
+            dayOfWeek: REVERSE_DAY_MAP[currentDate.getDay()],
+            timeString: fromTime || '09:00',
+          };
+        });
+
+        if (schedules.length < count) {
           LoggerService.warn(
             'useScheduleRecurrence',
-            `Only created ${sessionsCreated} of ${count} requested sessions`
+            `Only created ${schedules.length} of ${count} requested sessions`
           );
         }
 
@@ -164,9 +143,19 @@ export function useScheduleRecurrence(initialConfig: Partial<RecurrenceConfig> =
     return calculateNextDates(
       config.selectedDays,
       config.numberOfSessions,
-      config.selectedTime
+      config.selectedTime,
+      config.startFrom,
+      config.recurrenceType
     );
-  }, [config.enabled, config.selectedDays, config.numberOfSessions, config.selectedTime, calculateNextDates]);
+  }, [
+    config.enabled,
+    config.selectedDays,
+    config.numberOfSessions,
+    config.selectedTime,
+    config.startFrom,
+    config.recurrenceType,
+    calculateNextDates,
+  ]);
 
   /**
    * Atualizar dias selecionados
@@ -185,6 +174,26 @@ export function useScheduleRecurrence(initialConfig: Partial<RecurrenceConfig> =
     setConfig((prev) => ({
       ...prev,
       selectedTime: time,
+    }));
+  }, []);
+
+  /**
+   * Atualizar data-base "A partir de"
+   */
+  const updateStartFrom = useCallback((startFrom: Date) => {
+    setConfig((prev) => ({
+      ...prev,
+      startFrom,
+    }));
+  }, []);
+
+  /**
+   * Atualizar tipo de recorrência
+   */
+  const updateRecurrenceType = useCallback((recurrenceType: RecurrenceType) => {
+    setConfig((prev) => ({
+      ...prev,
+      recurrenceType,
     }));
   }, []);
 
@@ -237,6 +246,8 @@ export function useScheduleRecurrence(initialConfig: Partial<RecurrenceConfig> =
       selectedDays: [],
       selectedTime: '',
       numberOfSessions: 1,
+      startFrom: getDefaultStartFrom(),
+      recurrenceType: 'semanal',
     });
   }, []);
 
@@ -275,6 +286,8 @@ export function useScheduleRecurrence(initialConfig: Partial<RecurrenceConfig> =
     // Atualizar configuração
     updateSelectedDays,
     updateSelectedTime,
+    updateStartFrom,
+    updateRecurrenceType,
     updateNumberOfSessions,
     updateEmployeeId,
     updateBranchId,
