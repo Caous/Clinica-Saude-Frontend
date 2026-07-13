@@ -90,6 +90,31 @@ describe("calculateRecurrenceDates", () => {
 
     expect(result.map(ymd)).toEqual(["2026-07-25"]);
   });
+
+  it("UT-7 (regressão): quinzenal segunda a partir de ter/14/07 -> [20/07, 03/08] (não pula p/ 27/07)", () => {
+    // O dia selecionado (segunda) cai antes do startFrom na mesma semana (13/07 < 14/07).
+    // A primeira ocorrência deve ser a próxima segunda >= 14/07 (20/07) e o intervalo
+    // quinzenal conta a partir dela — sem saltar 20/07.
+    const result = calculateRecurrenceDates({
+      daysOfWeek: ["Segunda-Feira"],
+      count: 2,
+      recurrenceType: "quinzenal",
+      startFrom: date(2026, 7, 14),
+    });
+
+    expect(result.map(ymd)).toEqual(["2026-07-20", "2026-08-03"]);
+  });
+
+  it("UT-8 (regressão): quinzenal segunda a partir de ter/21/07 -> [27/07, 10/08]", () => {
+    const result = calculateRecurrenceDates({
+      daysOfWeek: ["Segunda-Feira"],
+      count: 2,
+      recurrenceType: "quinzenal",
+      startFrom: date(2026, 7, 21),
+    });
+
+    expect(result.map(ymd)).toEqual(["2026-07-27", "2026-08-10"]);
+  });
 });
 
 describe("getDefaultStartFrom", () => {

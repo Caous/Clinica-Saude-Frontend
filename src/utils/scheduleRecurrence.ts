@@ -101,10 +101,20 @@ export function calculateRecurrenceDates(params: RecurrenceDatesParams): Date[] 
   const base = startOfDay(startFrom);
   const weekInterval = RECURRENCE_WEEK_INTERVAL[recurrenceType] ?? 1;
 
-  // Âncora = domingo da semana que contém `base` (getDay: Domingo = 0).
+  // Primeira ocorrência = primeiro dia-da-semana selecionado >= `base`.
+  // O intervalo (quinzenal/mensal) é contado A PARTIR DELA — não de uma grade
+  // alinhada à semana do `startFrom`. Caso contrário, quando o dia selecionado
+  // cai antes do `startFrom` dentro da mesma semana, o bloco seguinte saltaria
+  // um intervalo inteiro (ex.: quinzenal a partir de ter/14 pularia 20 e iria p/ 27).
+  const firstOccurrence = new Date(base);
+  while (!dayNumbers.includes(firstOccurrence.getDay())) {
+    firstOccurrence.setDate(firstOccurrence.getDate() + 1);
+  }
+
+  // Âncora = domingo da semana que contém a PRIMEIRA ocorrência (getDay: Domingo = 0).
   // Blocos de ocorrências caem em `âncora + k * intervalo` semanas.
-  const anchorSunday = new Date(base);
-  anchorSunday.setDate(base.getDate() - base.getDay());
+  const anchorSunday = new Date(firstOccurrence);
+  anchorSunday.setDate(firstOccurrence.getDate() - firstOccurrence.getDay());
 
   // Validação de horário passado só se aplica quando "a partir de" é o dia atual.
   const startFromIsToday = isSameDay(base, now);
