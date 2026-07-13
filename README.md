@@ -1,5 +1,6 @@
 # Instituto Barros — Admin Frontend
 
+
 ![React](https://img.shields.io/badge/React-18-61DAFB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF.svg)
