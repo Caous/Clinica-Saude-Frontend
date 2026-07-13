@@ -66,6 +66,7 @@ export default function FormOrderService({
     clienteId: "",
     funcionarioId: "",
     dataPagamento: new Date().toISOString().split("T")[0],
+    dataPlano: new Date().toISOString().split("T")[0],
     qtdSessaoTotal: 0,
     qtdSessaoRealizada: 1,
     servicos: [],
@@ -521,6 +522,9 @@ export default function FormOrderService({
         clienteId: data.clienteId,
         funcionarioId: data.funcionarioId,
         dataPagamento: data.dataPagamento?.split("T")[0],
+        dataPlano:
+          data.dataPlano?.split("T")[0] ??
+          new Date().toISOString().split("T")[0],
         qtdSessaoTotal: data.qtdSessaoTotal,
         qtdSessaoRealizada: data.qtdSessaoRealizada,
         funcionario: data.funcionario,
@@ -630,6 +634,12 @@ export default function FormOrderService({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação: Data do plano (competência) é obrigatória (AC-5).
+    if (!formData.dataPlano) {
+      toast.error("Informe a data do plano.");
+      return;
+    }
 
     // Validação específica para recorrência
     if (userConfig) {
@@ -1284,6 +1294,25 @@ export default function FormOrderService({
                     }
                     className="text-black"
                     required={true}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="data-plano">
+                    Data do plano<span className="text-red-300">*</span>
+                  </Label>
+                  <Input
+                    id="data-plano"
+                    type="date"
+                    value={formData.dataPlano?.slice(0, 10) || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        dataPlano: e.target.value,
+                      }))
+                    }
+                    className="text-black"
+                    required={true}
+                    hint="Competência do plano — usada no faturamento do dashboard."
                   />
                 </div>
               </div>

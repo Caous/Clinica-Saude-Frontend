@@ -19,6 +19,8 @@ export interface OrderServiceRequestDto extends BaseResponseDto {
   precoDescontado?: number;
   formaPagamento: number;
   dataPagamento?: string;
+  /** Data (competência) do plano — usada pelo faturamento do dashboard. ISO date. */
+  dataPlano?: string;
   dataConclusaoServico?: string;
   funcionario?: EmployeeRequestDto;
   cliente?: CustomerRequestDto;
