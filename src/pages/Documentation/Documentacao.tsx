@@ -1,11 +1,29 @@
 import { useMemo, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-import { DOCUMENTACAO, DocModule, DocSection } from "../../data/documentacao";
+import {
+  DOCUMENTACAO,
+  DocModule,
+  DocSection,
+  DocDownload,
+} from "../../data/documentacao";
 import {
   getUserRoleFromToken,
   userHasRole,
 } from "../../services/util/rolePermissions";
+
+/** Gera o arquivo no navegador (via Blob) e dispara o download. Sem backend. */
+function baixarArquivo(download: DocDownload) {
+  const blob = new Blob([download.content], { type: download.mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = download.filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 function SectionAccordion({ section }: { section: DocSection }) {
   const [aberto, setAberto] = useState(false);
@@ -75,6 +93,30 @@ function SectionAccordion({ section }: { section: DocSection }) {
                   <li key={i} className="text-sm text-blue-800 dark:text-blue-300">{d}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {section.downloads && section.downloads.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {section.downloads.map((d, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => baixarArquivo(d)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  {d.label}
+                </button>
+              ))}
             </div>
           )}
         </div>
