@@ -60,11 +60,30 @@ import {
 } from "../components/helper/formatUtils";
 import FormSession from "./Forms/OrderServiceForms/FormSession";
 import FormCustomer from "./Forms/Customer/FormCustomer";
+import {
+  calculateRecurrenceDates,
+  getDefaultStartFrom,
+  type RecurrenceType,
+} from "../utils/scheduleRecurrence";
 
 interface CalendarEvent extends EventInput {
   extendedProps: {
     calendar: string;
   };
+}
+
+/** Converte uma Date para o valor "YYYY-MM-DD" (local) de um <input type="date">. */
+function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Converte o valor "YYYY-MM-DD" de um <input type="date"> em Date local à meia-noite. */
+function fromDateInputValue(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
 }
 
 const Calendar: React.FC = () => {
@@ -149,6 +168,10 @@ const Calendar: React.FC = () => {
   const [qtdSessoes, setQtdSessoes] = useState<number>(1);
   const [horarioFinalRecorrente, setHorarioFinalRecorrente] =
     useState<string>("");
+  // Data-base "A partir de": pré-preenchida com o dia seguinte ao atual.
+  const [dataInicioRecorrencia, setDataInicioRecorrencia] = useState<string>(
+    () => toDateInputValue(getDefaultStartFrom()),
+  );
   const [isEditingRecurrence, setIsEditingRecurrence] =
     useState<boolean>(false);
 
@@ -397,7 +420,9 @@ const Calendar: React.FC = () => {
     return dates;
   };
 
-  // Nova função para calcular datas baseado no tipo de recorrência
+  // Calcula as datas da recorrência a partir da data-base "A partir de".
+  // A regra (dia da semana + intervalo semanal/quinzenal/mensal) vive no núcleo
+  // puro `calculateRecurrenceDates`; aqui apenas fornecemos a data-base escolhida.
   // Exemplo:
   // - Semanal + Segunda,Quarta + 6 sessões = distribui 6 sessões em 3 semanas (2 por semana)
   // - Quinzenal + Segunda,Sexta + 6 sessões = distribui 6 sessões em 6 semanas (1 por semana a cada 2 semanas)
@@ -407,96 +432,17 @@ const Calendar: React.FC = () => {
     count: number,
     recurrenceType: string,
   ): Date[] => {
-    const days = {
-      "Segunda-Feira": 1,
-      "Terça-Feira": 2,
-      "Quarta-Feira": 3,
-      "Quinta-Feira": 4,
-      "Sexta-Feira": 5,
-      Sábado: 6,
-      Domingo: 0,
-    };
+    const startFrom = dataInicioRecorrencia
+      ? fromDateInputValue(dataInicioRecorrencia)
+      : getDefaultStartFrom();
 
-    if (daysOfWeek.length === 0) return [];
-
-    // Converter dias selecionados para números e ordenar
-    const selectedDayNumbers = daysOfWeek
-      .map((day) => days[day as keyof typeof days])
-      .filter((day) => day !== undefined)
-      .sort((a, b) => a - b);
-
-    if (selectedDayNumbers.length === 0) return [];
-
-    const dates: Date[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Definir o intervalo baseado no tipo de recorrência
-    const intervals = {
-      semanal: 1, // A cada 1 semana
-      quinzenal: 2, // A cada 2 semanas
-      mensal: 4, // A cada 4 semanas
-    };
-
-    const weekInterval =
-      intervals[recurrenceType as keyof typeof intervals] || 1;
-    let currentWeek = 0;
-    let sessionsCreated = 0;
-
-    // Loop através das semanas
-    while (sessionsCreated < count) {
-      // Para cada semana, verificar todos os dias selecionados
-      for (const targetDayNumber of selectedDayNumbers) {
-        if (sessionsCreated >= count) break;
-
-        // Calcular a data base desta semana (segunda-feira)
-        const baseDate = new Date(today);
-        baseDate.setDate(baseDate.getDate() + currentWeek * 7);
-
-        // Encontrar o primeiro dia da semana (domingo = 0, segunda = 1, etc)
-        const currentDayOfWeek = baseDate.getDay();
-        const daysUntilMonday =
-          currentDayOfWeek === 0 ? 1 : (1 - currentDayOfWeek + 7) % 7;
-        const monday = new Date(baseDate);
-        monday.setDate(monday.getDate() + daysUntilMonday);
-
-        // Calcular quantos dias adicionar para chegar ao dia desejado
-        let daysToAdd = targetDayNumber - 1; // -1 porque segunda é dia 1
-        if (targetDayNumber === 0) daysToAdd = 6; // Domingo é o último dia da semana
-
-        const targetDate = new Date(monday);
-        targetDate.setDate(monday.getDate() + daysToAdd);
-
-        // Verificar se a data é válida (hoje ou futuro)
-        let isValidDate = targetDate >= today;
-
-        // Se for hoje, verificar se já passou do horário
-        if (
-          targetDate.toDateString() === today.toDateString() &&
-          selectedHorarioRecorrente
-        ) {
-          const [hours, minutes] = selectedHorarioRecorrente
-            .split(":")
-            .map(Number);
-          const targetTime = new Date(today);
-          targetTime.setHours(hours, minutes, 0, 0);
-
-          if (today >= targetTime) {
-            isValidDate = false;
-          }
-        }
-
-        if (isValidDate) {
-          dates.push(new Date(targetDate));
-          sessionsCreated++;
-        }
-      }
-
-      // Avançar para a próxima semana de acordo com o tipo de recorrência
-      currentWeek += weekInterval;
-    }
-
-    return dates;
+    return calculateRecurrenceDates({
+      daysOfWeek,
+      count,
+      startFrom,
+      recurrenceType: recurrenceType as RecurrenceType,
+      time: selectedHorarioRecorrente || undefined,
+    });
   };
 
   // Função para buscar sessões futuras de um cliente e fisioterapeuta específicos
@@ -1806,6 +1752,7 @@ const Calendar: React.FC = () => {
     setSelectedDiasSemana([]);
     setSelectedHorarioRecorrente("");
     setQtdSessoes(1);
+    setDataInicioRecorrencia(toDateInputValue(getDefaultStartFrom()));
     setIsEditingRecurrence(false);
 
     // Reset dos novos estados
@@ -2685,6 +2632,20 @@ const Calendar: React.FC = () => {
                           onChange={(value) => setTipoRecorrencia(value)}
                           placeholder="Selecione o tipo"
                           className="dark:bg-dark-900"
+                        />
+                      </div>
+                      <div>
+                        <Label>
+                          A partir de<span className="text-red-300">*</span>
+                        </Label>
+                        <input
+                          type="date"
+                          value={dataInicioRecorrencia}
+                          min={toDateInputValue(new Date())}
+                          onChange={(e) =>
+                            setDataInicioRecorrencia(e.target.value)
+                          }
+                          className="dark:bg-dark-900 h-11 w-full appearance-none rounded-lg border border-gray-300 bg-transparent bg-none px-4 py-2.5 pl-4 pr-11 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
                         />
                       </div>
                       <div>
