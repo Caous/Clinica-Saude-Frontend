@@ -1,4 +1,5 @@
 import Select, { StylesConfig, components } from 'react-select';
+import { contemTextoNormalizado } from '../../services/util/textNormalize';
 
 export interface Option {
   value: string;
@@ -270,8 +271,9 @@ const SelectWithSearch: React.FC<SelectWithSearchProps> = ({
         classNamePrefix="react-select"
         // Configurações para melhor UX
         filterOption={(option, inputValue) => {
-          // Busca case-insensitive que procura em qualquer parte do texto
-          return option.label.toLowerCase().includes(inputValue.toLowerCase());
+          // Busca por substring, insensível a acento e caixa, em qualquer parte
+          // do texto. Normaliza apenas o label; o value (id) permanece intacto.
+          return contemTextoNormalizado(option.label, inputValue);
         }}
         // Mensagens em português
         loadingMessage={() => "Carregando..."}
