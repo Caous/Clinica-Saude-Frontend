@@ -16,6 +16,7 @@ export interface FinancialTransactionRequestDto extends BaseRequestDto {
     numeroParcelas?: number;
     numberOfInstallments?: number; // Additional property for number of installments
     dataVencimento: string;
+    dataPlano?: string; // Competência do plano/tratamento — usada no faturamento do dashboard
     ordemServicoId?: string;
     usrDescricaoCadastro?: string;
     usrCadastro?: string;

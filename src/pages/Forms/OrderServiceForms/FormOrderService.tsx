@@ -303,6 +303,9 @@ export default function FormOrderService({
         formaPagamento: formaPagamentoMap[orderServiceData.formaPagamento],
         conta: selectedConta,
         dataVencimento: new Date().toISOString().split("T")[0], // Data atual
+        // Competência do plano (usada no faturamento). É esta transação que o
+        // dashboard agrega — precisa carregar a DataPlano, senão o backend usa hoje.
+        dataPlano: formData.dataPlano?.split("T")[0],
         filialId: selectedFilial, // Usar a filial selecionada no formulário
         ordemServicoId: orderServiceData.id, // ID da ordem de serviço
         observacoes: "",
