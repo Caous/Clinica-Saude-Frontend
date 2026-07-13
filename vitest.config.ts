@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 
 // Configuração de testes (Vitest + Testing Library).
 // Mantida separada de vite.config.ts para não impactar o build de produção.
+// Ambiente jsdom cobre tanto testes de componente quanto lógica pura.
 export default defineConfig({
   plugins: [react()],
   test: {
