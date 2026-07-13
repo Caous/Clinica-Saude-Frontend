@@ -128,12 +128,20 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         onError: async (error: any) => {
             const response = error.response?.data;
 
+            console.error("[FormSession] Erro ao criar sessão:", {
+                status: error.response?.status,
+                error: response?.error,
+                detail: response?.detail,
+                innerDetail: response?.innerDetail,
+                exceptionType: response?.exceptionType,
+                stackTrace: response?.stackTrace,
+            });
+
             if (Array.isArray(response)) {
                 response.forEach((err: { errorMensagem: string }) => {
                     toast.error(err.errorMensagem, { duration: 4000 });
                 });
             } else if (response?.error) {
-                // 409 Conflict — mensagem estruturada do backend { error: "..." }
                 toast.error(response.error, { duration: 6000 });
             } else if (typeof response === "string") {
                 toast.error(response, { duration: 4000 });
