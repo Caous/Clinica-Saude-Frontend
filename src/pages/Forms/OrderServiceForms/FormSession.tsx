@@ -18,6 +18,7 @@ import { HistoryCustomerRequestDto } from "../../../services/model/Dto/Request/C
 import { getCustomerHistoryAsync, postCustomerHistoryAsync } from "../../../services/service/CustomerService";
 import { HistoryCustomerResponseDto, CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
 import { getUserRoleFromToken, userHasRole, USER_ROLES } from "../../../services/util/rolePermissions";
+import { calcularSessaoInfo } from "./calcularSessaoInfo";
 
 interface FormSessionProps {
     clienteId?: string;
@@ -186,35 +187,18 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
         return ordensServico.find(ordem => ordem.id === formData.orderServiceId);
     }, [formData.orderServiceId, ordensServico]);
 
-    // Calcular sessões realizadas e validação
-    const sessaoInfo = useMemo(() => {
-        if (!ordemSelecionada) {
-            return {
-                sessoesRealizadas: 0,
-                sessaoTotal: 0,
-                limiteAtingido: false,
-                percentual: 0
-            };
-        }
+    // Calcular sessões realizadas e validação.
+    // O contador é segmentado pelo tipo de check-in do usuário logado
+    // (tipoCheckInFixo): Fisio e Plano têm limites independentes. A baixa
+    // administrativa (Plano) não bloqueia o check-in do Fisioterapeuta e
+    // vice-versa. Registros legados (tipoCheckIn undefined) contam como Plano.
+    const sessaoInfo = useMemo(
+        () => calcularSessaoInfo(ordemSelecionada, tipoCheckInFixo),
+        [ordemSelecionada, tipoCheckInFixo]
+    );
 
-        const sessaoTotal = ordemSelecionada.qtdSessaoTotal ?? 0;
-        const sessoesRealizadas = (ordemSelecionada.sessoes ?? [])
-            .filter(s =>
-                (s.tipoCheckIn === ETipoCheckIn.Plano || s.tipoCheckIn === undefined) && // Plano debita do plano do paciente
-                (s.statusSessao === 0 || s.statusSessao === 1)                          // Realizada ou Faltou
-            )
-            .length;
-
-        const limiteAtingido = sessoesRealizadas >= sessaoTotal;
-        const percentual = sessaoTotal > 0 ? (sessoesRealizadas / sessaoTotal) * 100 : 0;
-
-        return {
-            sessoesRealizadas,
-            sessaoTotal,
-            limiteAtingido,
-            percentual
-        };
-    }, [ordemSelecionada]);
+    // Rótulo do tipo de check-in do usuário logado, exibido junto ao contador.
+    const rotuloTipoCheckIn = isFisioterapeuta ? "Fisio" : "Plano";
 
     // Verificar se já existe check-in DO MESMO TIPO neste plano neste dia.
     // Fisio e Plano são independentes: um check-in Plano (baixa admin) não
@@ -425,7 +409,7 @@ export default function FormSession({ clienteId, scheduleData, closeModal, onSuc
                                         <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Sessões Realizadas
+                                                    Sessões Realizadas ({rotuloTipoCheckIn})
                                                 </span>
                                                 <span className={`text-sm font-bold ${
                                                     sessaoInfo.limiteAtingido 

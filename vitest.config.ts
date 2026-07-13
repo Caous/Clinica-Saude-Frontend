@@ -1,10 +1,16 @@
 import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
 
-// Configuração de testes unitários (lógica pura de recorrência).
-// Ambiente "node": não depende de DOM, mantendo a suíte leve e determinística.
+// Configuração de testes (Vitest + Testing Library).
+// Mantida separada de vite.config.ts para não impactar o build de produção.
+// Ambiente jsdom cobre tanto testes de componente quanto lógica pura.
 export default defineConfig({
+  plugins: [react()],
   test: {
-    environment: "node",
+    environment: "jsdom",
+    globals: false,
+    setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    css: false,
   },
 });
