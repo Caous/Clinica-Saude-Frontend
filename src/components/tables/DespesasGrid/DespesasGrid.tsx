@@ -258,7 +258,13 @@ export default function DespesasGrid({ filters }: DespesasGridProps) {
                   isHeader
                   className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
                 >
-                  Data
+                  Data do plano
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Data de cadastro
                 </TableCell>
                 <TableCell
                   isHeader
@@ -361,6 +367,13 @@ export default function DespesasGrid({ filters }: DespesasGridProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {transaction.dataPlano
+                        ? FinancialTransactionUtils.formatDateForDisplay(
+                            transaction.dataPlano
+                          )
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                       {transaction.dataCadastro
                         ? FinancialTransactionUtils.formatDateForDisplay(
                             transaction.dataCadastro
@@ -426,6 +439,9 @@ export default function DespesasGrid({ filters }: DespesasGridProps) {
                 ))
               ) : (
                 <TableRow>
+                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    -
+                  </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                     -
                   </TableCell>

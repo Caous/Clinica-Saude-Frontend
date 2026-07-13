@@ -31,6 +31,7 @@ export interface FinancialTransactionResponseDto extends BaseResponseDto {
     observacoes?: string;
     numeroParcelas: number;
     dataVencimento: string;
+    dataPlano?: string; // Competência do plano/tratamento (recebimentos); null em despesas/legado
     parcelas: ParcelaResponseDto[];
     usrCadastro?: string;
     usrDescricaoCadastro?: string;
