@@ -320,7 +320,15 @@ export const shouldApplyAgendaFilter = (userRoles: string | string[] | null): bo
 // Apenas Administrador e Administrativo podem criar eventos
 export const canCreateCalendarEvent = (userRoles: string | string[] | null): boolean => {
   if (!userRoles) return false;
-  
-  return userHasRole(userRoles, USER_ROLES.ADMINISTRADOR) || 
+
+  return userHasRole(userRoles, USER_ROLES.ADMINISTRADOR) ||
          userHasRole(userRoles, USER_ROLES.ADMINISTRATIVO);
+};
+
+// Função para verificar se o usuário vê os registros excluídos logicamente nos grids
+// e pode restaurá-los. Apenas Administrador.
+// O backend aplica a mesma regra a partir do JWT — isto aqui só controla o que é
+// renderizado, nunca é a fonte de verdade da permissão.
+export const canManageDeletedRecords = (userRoles: string | string[] | null): boolean => {
+  return userHasRole(userRoles, USER_ROLES.ADMINISTRADOR);
 };

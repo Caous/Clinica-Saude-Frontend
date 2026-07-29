@@ -1,5 +1,6 @@
 import { BranchOfficeRequestDto } from "../model/Dto/Request/BranchOfficeRequestDto";
 import { BranchOfficeResponseDto } from "../model/Dto/Response/BranchOfficeResponseDto";
+import { RestoreResponseDto } from "../model/Dto/Response/RestoreResponseDto";
 import { instanceApi } from "./AxioService";
 
 
@@ -30,5 +31,11 @@ export const BranchOfficeService = {
 
     async disable(id: string): Promise<void> {
         await instanceApi.put(`${baseUrl}/DesativarFilial/${id}`);
+    },
+
+    // Reverte a exclusão lógica (apenas Administrador)
+    async restore(id: string): Promise<RestoreResponseDto> {
+        const response = await instanceApi.put<RestoreResponseDto>(`${baseUrl}/ReativarFilial/${id}`);
+        return response.data;
     }
 };

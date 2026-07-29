@@ -17,6 +17,14 @@ import { formatCPF, formatPhone } from "../../helper/formatUtils";
 import Button from "../../ui/button/Button";
 import FormEmployee from "../../../pages/Forms/Employee/FormEmployee";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import {
+    DesativacaoBodyCells,
+    DesativacaoHeaderCells,
+    RestoreButton,
+    RestoreConfirmContent,
+    notificarRestauracao,
+    useCanManageDeletedRecords,
+} from "../shared/DesativacaoColumns";
 
 interface EmployeeGridProps {
     searchTerm?: string;
@@ -26,11 +34,15 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeResponseDto | undefined>(undefined);
     const { isOpen, openModal, closeModal } = useModal();
     const { isOpen: isOpenDelete, openModal: openModalDelete, closeModal: closeModalDelete } = useModal();
+    const { isOpen: isOpenRestore, openModal: openModalRestore, closeModal: closeModalRestore } = useModal();
     const [idDeleteRegister, setIdDeleteRegister] = useState<string>("");
+    const [idRestoreRegister, setIdRestoreRegister] = useState<string>("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
     const isReadOnly = isReadOnlyRole(getUserRoleFromToken(localStorage.getItem("token")));
+    // Administrador vê os funcionários excluídos logicamente e pode restaurá-los
+    const canManageDeleted = useCanManageDeletedRecords();
 
     const queryClient = useQueryClient();
 
@@ -48,6 +60,22 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
         },
         onError: () => {
             toast.error("Erro ao desativar funcionário.");
+        },
+    });
+
+    const mutationRestore = useMutation({
+        mutationFn: EmployeeService.restore,
+        onSuccess: (data) => {
+            notificarRestauracao(
+                data,
+                "Funcionário restaurado com sucesso! O acesso de login continua bloqueado.",
+                toast,
+            );
+            queryClient.invalidateQueries({ queryKey: ["allEmployee"] });
+            closeModalRestore();
+        },
+        onError: () => {
+            toast.error("Erro ao restaurar funcionário.");
         },
     });
 
@@ -122,6 +150,16 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
         mutationDelete.mutate(idDeleteRegister);
     };
 
+    const handleOpenModalRestore = (id: string) => {
+        setIdRestoreRegister(id);
+        openModalRestore();
+    };
+
+    const handlePostRestore = (e: React.FormEvent) => {
+        e.preventDefault();
+        mutationRestore.mutate(idRestoreRegister);
+    };
+
     if (isLoading) return <p className="text-dark dark:text-white">Carregando funcionários...</p>;
     if (isError) return <p className="text-dark dark:text-white">Erro ao carregar funcionários!</p>;
 
@@ -139,6 +177,7 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
                                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Email</TableCell>
                                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Cargo</TableCell>
                                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Status</TableCell>
+                                {canManageDeleted && <DesativacaoHeaderCells />}
                                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">Ações</TableCell>
                             </TableRow>
                         </TableHeader>
@@ -164,9 +203,17 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
                                         className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{employee.cargo}</TableCell>
                                     <TableCell
                                         className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">{employee.dataDesativacao ? "Inativo" : "Ativo"}</TableCell>
+                                    {canManageDeleted && <DesativacaoBodyCells registro={employee} />}
+
                                     <TableCell
                                         className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                                        {!isReadOnly && (
+                                        {/* Registro excluído logicamente: para o Administrador a única ação é restaurar */}
+                                        {canManageDeleted && employee.dataDesativacao ? (
+                                            <RestoreButton
+                                                onClick={() => handleOpenModalRestore(employee.id!)}
+                                                disabled={mutationRestore.isPending}
+                                            />
+                                        ) : !isReadOnly && (
                                         <div className="flex flex-col sm:flex-row gap-2">
                                             <button
                                                 onClick={() => handleOpenModal(employee)}
@@ -215,6 +262,16 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
 
             <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
                 <FormEmployee data={selectedEmployee} edit={!!selectedEmployee?.id} closeModal={closeModal} />
+            </Modal>
+
+            <Modal isOpen={isOpenRestore} onClose={closeModalRestore} className="max-w-[700px] m-4">
+                <RestoreConfirmContent
+                    titulo="Restaurar Funcionário"
+                    mensagem="Este funcionário foi excluído. Restaurar devolve apenas o cadastro — o acesso de login continua bloqueado e exige reset de senha. Deseja continuar?"
+                    onCancel={closeModalRestore}
+                    onConfirm={handlePostRestore}
+                    isPending={mutationRestore.isPending}
+                />
             </Modal>
 
             <Modal isOpen={isOpenDelete} onClose={closeModalDelete} className="max-w-[700px] m-4">

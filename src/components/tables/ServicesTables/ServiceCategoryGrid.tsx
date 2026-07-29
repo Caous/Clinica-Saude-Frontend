@@ -12,12 +12,22 @@ import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
 import { useModal } from "../../../hooks/useModal";
 import { useModal as useModelDelete } from "../../../hooks/useModal";
+import { useModal as useModalRestore } from "../../../hooks/useModal";
 import { useState, useMemo } from "react";
 import Alert, { AlertProps } from "../../ui/alert/Alert";
 import FormCategoryService from "../../../pages/Forms/ServicesForms/FormCategoryService";
 import { CategoryServiceResponseDto } from "../../../services/model/Dto/Response/CategoryServiceResponseDto";
-import { getAllCategoriasAsync, desativarCategoriaAsync, getCategoriaByIdAsync } from "../../../services/service/ServiceCategoryService";
+import { getAllCategoriasAsync, desativarCategoriaAsync, getCategoriaByIdAsync, reativarCategoriaAsync } from "../../../services/service/ServiceCategoryService";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import {
+    DesativacaoBodyCells,
+    DesativacaoHeaderCells,
+    RestoreButton,
+    RestoreConfirmContent,
+    notificarRestauracao,
+    useCanManageDeletedRecords,
+} from "../shared/DesativacaoColumns";
+import toast from "react-hot-toast";
 
 interface ServiceCategoryGridProps {
     searchTerm?: string;
@@ -31,7 +41,10 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
         desc: "",
     });
     const [idDeleteRegister, setIdDeleteRegister] = useState<string>("");
+    const [idRestoreRegister, setIdRestoreRegister] = useState<string>("");
     const isReadOnly = isReadOnlyRole(getUserRoleFromToken(localStorage.getItem("token")));
+    // Administrador vê as categorias excluídas logicamente e pode restaurá-las
+    const canManageDeleted = useCanManageDeletedRecords();
 
     const [showAlert] = useState<AlertProps | null>(null);
 
@@ -49,10 +62,22 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
             closeModalDelete();
         },
     });
+    const mutationRestore = useMutation({
+        mutationFn: reativarCategoriaAsync,
+        onSuccess: (data) => {
+            notificarRestauracao(data, "Categoria restaurada com sucesso!", toast);
+            queryClient.invalidateQueries({ queryKey: ["getAllCategory"] });
+            closeModalRestore();
+        },
+        onError: () => {
+            toast.error("Erro ao restaurar a categoria.");
+        },
+    });
 
     // MODAIS -----------------------------
     const { isOpen, openModal, closeModal } = useModal();
     const { isOpen: isOpenDelete, openModal: openModalDelete, closeModal: closeModalDelete } = useModelDelete();
+    const { isOpen: isOpenRestore, openModal: openModalRestore, closeModal: closeModalRestore } = useModalRestore();
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10; // ou qualquer número que você quiser por página
 
@@ -110,6 +135,16 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
         setIdDeleteRegister("");
     };
 
+    const handleOpenModalRestore = (id: string) => {
+        setIdRestoreRegister(id);
+        openModalRestore();
+    };
+
+    const handlePostRestore = (e: React.FormEvent) => {
+        e.preventDefault();
+        mutationRestore.mutate(idRestoreRegister);
+    };
+
     const loadCategoryData = async (id: string) => {
         try {
             const category = await getCategoriaByIdAsync(id);
@@ -155,6 +190,7 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
                                 >
                                     Status
                                 </TableCell>
+                                {canManageDeleted && <DesativacaoHeaderCells />}
                                 <TableCell
                                     isHeader
                                     className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
@@ -192,8 +228,16 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
                                                 : "Desativado"}
                                         </Badge>
                                     </TableCell>
+                                    {canManageDeleted && <DesativacaoBodyCells registro={category} />}
+
                                     <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                                        {!isReadOnly && (
+                                        {/* Registro excluído logicamente: para o Administrador a única ação é restaurar */}
+                                        {canManageDeleted && category.dataDesativacao ? (
+                                            <RestoreButton
+                                                onClick={() => handleOpenModalRestore(category.id!.toString())}
+                                                disabled={mutationRestore.isPending}
+                                            />
+                                        ) : !isReadOnly && (
                                         <div className="flex flex-col sm:flex-row gap-2">
                                             <button
                                                 onClick={() => handleOpenModal(category.id!.toString())}
@@ -241,6 +285,16 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
 
                 <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
                     <FormCategoryService data={formDataResponse} edit={!!formDataResponse?.id} closeModal={closeModal} />
+                </Modal>
+
+                <Modal isOpen={isOpenRestore} onClose={closeModalRestore} className="max-w-[700px] m-4">
+                    <RestoreConfirmContent
+                        titulo="Restaurar Categoria"
+                        mensagem="Esta categoria foi excluída. Deseja restaurá-la?"
+                        onCancel={closeModalRestore}
+                        onConfirm={handlePostRestore}
+                        isPending={mutationRestore.isPending}
+                    />
                 </Modal>
 
                 <Modal isOpen={isOpenDelete} onClose={closeModalDelete} className="max-w-[700px] m-4">
