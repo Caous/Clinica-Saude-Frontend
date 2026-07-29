@@ -4,6 +4,7 @@ import {
     canManageDeletedRecords,
     getUserRoleFromToken,
 } from "../../../services/util/rolePermissions";
+import { RestoreResponseDto } from "../../../services/model/Dto/Response/RestoreResponseDto";
 
 /**
  * Colunas de auditoria de exclusão lógica, compartilhadas pelos grids de
@@ -19,6 +20,30 @@ export interface RegistroDesativavel {
     usrDesativacao?: string;
     usrDescricaoDesativacao?: string;
 }
+
+/**
+ * Notifica o resultado da restauração.
+ *
+ * Se a auditoria não foi gravada, mostra o aviso do backend em vez do toast de
+ * sucesso: a restauração existe justamente para consertar uma falha de
+ * rastreabilidade, então não pode passar batido que ela mesma não foi registrada.
+ */
+export const notificarRestauracao = (
+    resposta: RestoreResponseDto | undefined,
+    mensagemSucesso: string,
+    toast: { success: (m: string, o?: object) => void; error: (m: string, o?: object) => void },
+): void => {
+    if (resposta && resposta.auditoriaRegistrada === false) {
+        toast.error(
+            resposta.aviso ??
+                "Registro restaurado, mas não foi possível gravar o log de auditoria desta ação. Avise o time de TI.",
+            { duration: 8000 },
+        );
+        return;
+    }
+
+    toast.success(mensagemSucesso, { duration: 3000 });
+};
 
 /** Retorna true se o usuário logado pode ver e restaurar registros excluídos. */
 export const useCanManageDeletedRecords = (): boolean => {

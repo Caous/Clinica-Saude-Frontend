@@ -2,6 +2,7 @@ import { CustomerRequestDto, HistoryCustomerRequestDto } from "../model/Dto/Requ
 import { CustomerFilterRequestDto } from "../model/Dto/Request/CustomerFilterRequestDto";
 import { CustomerResponseDto, HistoryCustomerResponseDto } from "../model/Dto/Response/CustomerResponseDto";
 import { CustomerSummaryResponseDto } from "../model/Dto/Response/CustomerSummaryResponseDto";
+import { RestoreResponseDto } from "../model/Dto/Response/RestoreResponseDto";
 import { instanceApi } from "./AxioService";
 
 
@@ -81,9 +82,11 @@ export const disableCustomerAsync = async (id: string): Promise<{ status: number
 };
 
 // PUT - Reverter exclusão lógica de cliente (apenas Administrador)
-export const restoreCustomerAsync = async (id: string): Promise<{ status: number }> => {
-    const response = await instanceApi.put(`/Customer/ReativarCliente/${id}`);
-    return { status: response.status };
+export const restoreCustomerAsync = async (
+    id: string
+): Promise<{ status: number; data: RestoreResponseDto }> => {
+    const response = await instanceApi.put<RestoreResponseDto>(`/Customer/ReativarCliente/${id}`);
+    return { status: response.status, data: response.data };
 };
 
 // POST - Enviar arquivo Excel para importar clientes

@@ -1,6 +1,7 @@
 
 import { CategoryServiceResquestDto } from "../model/Dto/Request/CategoryServiceResquestDto";
 import { CategoryServiceResponseDto } from "../model/Dto/Response/CategoryServiceResponseDto";
+import { RestoreResponseDto } from "../model/Dto/Response/RestoreResponseDto";
 import { instanceApi } from "./AxioService";
 
 
@@ -65,11 +66,11 @@ export const desativarCategoriaAsync = async (
 // Reverte a exclusão lógica (apenas Administrador)
 export const reativarCategoriaAsync = async (
   id: string
-): Promise<{ status: number }> => {
-  const response = await instanceApi.put(
+): Promise<RestoreResponseDto> => {
+  const response = await instanceApi.put<RestoreResponseDto>(
     `/CategoryService/ReativarCategoria/${id}`
   );
-  return { status: response.status };
+  return response.data;
 };
 
 export const deletarCategoriaAsync = async (

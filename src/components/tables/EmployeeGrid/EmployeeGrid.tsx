@@ -22,6 +22,7 @@ import {
     DesativacaoHeaderCells,
     RestoreButton,
     RestoreConfirmContent,
+    notificarRestauracao,
     useCanManageDeletedRecords,
 } from "../shared/DesativacaoColumns";
 
@@ -64,8 +65,12 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
 
     const mutationRestore = useMutation({
         mutationFn: EmployeeService.restore,
-        onSuccess: () => {
-            toast.success("Funcionário restaurado com sucesso! O acesso de login continua bloqueado.");
+        onSuccess: (data) => {
+            notificarRestauracao(
+                data,
+                "Funcionário restaurado com sucesso! O acesso de login continua bloqueado.",
+                toast,
+            );
             queryClient.invalidateQueries({ queryKey: ["allEmployee"] });
             closeModalRestore();
         },

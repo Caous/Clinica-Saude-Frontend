@@ -37,6 +37,7 @@ import {
     DesativacaoHeaderCells,
     RestoreButton,
     RestoreConfirmContent,
+    notificarRestauracao,
     useCanManageDeletedRecords,
 } from "../shared/DesativacaoColumns";
 
@@ -182,9 +183,9 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
     const mutationRestore = useMutation({
         mutationFn: restoreCustomerAsync,
-        onSuccess: ({ status }) => {
+        onSuccess: ({ status, data }) => {
             if (status === 200) {
-                toast.success("Paciente restaurado com sucesso!", { duration: 3000 });
+                notificarRestauracao(data, "Paciente restaurado com sucesso!", toast);
                 queryClient.invalidateQueries<CustomerResponseDto[]>({
                     queryKey: ["allCustomer"],
                 });

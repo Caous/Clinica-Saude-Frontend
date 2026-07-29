@@ -24,8 +24,10 @@ import {
     DesativacaoHeaderCells,
     RestoreButton,
     RestoreConfirmContent,
+    notificarRestauracao,
     useCanManageDeletedRecords,
 } from "../shared/DesativacaoColumns";
+import toast from "react-hot-toast";
 
 interface ServiceCategoryGridProps {
     searchTerm?: string;
@@ -62,9 +64,13 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
     });
     const mutationRestore = useMutation({
         mutationFn: reativarCategoriaAsync,
-        onSuccess: () => {
+        onSuccess: (data) => {
+            notificarRestauracao(data, "Categoria restaurada com sucesso!", toast);
             queryClient.invalidateQueries({ queryKey: ["getAllCategory"] });
             closeModalRestore();
+        },
+        onError: () => {
+            toast.error("Erro ao restaurar a categoria.");
         },
     });
 

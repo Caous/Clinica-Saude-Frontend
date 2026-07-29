@@ -23,8 +23,10 @@ import {
     DesativacaoHeaderCells,
     RestoreButton,
     RestoreConfirmContent,
+    notificarRestauracao,
     useCanManageDeletedRecords,
 } from "../shared/DesativacaoColumns";
+import toast from "react-hot-toast";
 
 interface SubServiceCategoryGridProps {
     searchTerm?: string;
@@ -64,9 +66,13 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
 
     const mutationRestore = useMutation({
         mutationFn: reativarSubCategoriaAsync,
-        onSuccess: () => {
+        onSuccess: (data) => {
+            notificarRestauracao(data, "Sub-serviço restaurado com sucesso!", toast);
             queryClient.invalidateQueries({ queryKey: ["getAllSubCategoryService"] });
             closeModalRestore();
+        },
+        onError: () => {
+            toast.error("Erro ao restaurar o sub-serviço.");
         },
     });
 

@@ -22,6 +22,7 @@ import {
   DesativacaoHeaderCells,
   RestoreButton,
   RestoreConfirmContent,
+  notificarRestauracao,
   useCanManageDeletedRecords,
 } from "../shared/DesativacaoColumns";
 
@@ -93,8 +94,8 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
 
   const mutationRestore = useMutation({
     mutationFn: BranchOfficeService.restore,
-    onSuccess: () => {
-      toast.success("Unidade restaurada com sucesso!");
+    onSuccess: (data) => {
+      notificarRestauracao(data, "Unidade restaurada com sucesso!", toast);
       queryClient.invalidateQueries({ queryKey: ["allBranchOffice"] });
       closeModalRestore();
     },
