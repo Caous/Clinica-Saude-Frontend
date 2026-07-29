@@ -13,6 +13,7 @@ import { useModal as useModelEmail } from "../../../hooks/useModal";
 import { useModal as useModelDelete } from "../../../hooks/useModal";
 import { useModal as useModalInfo } from "../../../hooks/useModal";
 import { useModal as useModalSession } from "../../../hooks/useModal";
+import { useModal as useModalRestore } from "../../../hooks/useModal";
 import { CustomerResponseDto } from "../../../services/model/Dto/Response/CustomerResponseDto";
 import Label from "../../form/Label";
 import Input from "../../form/input/InputField";
@@ -21,7 +22,7 @@ import Select from "../../form/Select";
 import { useState, useMemo } from "react";
 import TextArea from "../../form/input/TextArea";
 import FormCustomer from "../../../pages/Forms/Customer/FormCustomer";
-import { disableCustomerAsync, getAllCustomersAsync } from "../../../services/service/CustomerService";
+import { disableCustomerAsync, getAllCustomersAsync, restoreCustomerAsync } from "../../../services/service/CustomerService";
 import { CustomerRequestDto } from "../../../services/model/Dto/Request/CustomerRequestDto";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -31,6 +32,13 @@ import FormSession from "../../../pages/Forms/OrderServiceForms/FormSession";
 import { CustomerFilterRequestDto } from "../../../services/model/Dto/Request/CustomerFilterRequestDto";
 import { getUserRoleFromToken, userHasRole, USER_ROLES, isReadOnlyRole } from "../../../services/util/rolePermissions";
 import { ETipoCheckIn } from "../../../services/model/Enum/ETipoCheckIn";
+import {
+    DesativacaoBodyCells,
+    DesativacaoHeaderCells,
+    RestoreButton,
+    RestoreConfirmContent,
+    useCanManageDeletedRecords,
+} from "../shared/DesativacaoColumns";
 
 type SortField = 'nome' | 'sessoes' | 'status' | null;
 type SortDirection = 'asc' | 'desc';
@@ -49,7 +57,9 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
     const { isOpen: isOpenDelete, openModal: openModalDelete, closeModal: closeModalDelete } = useModelDelete();
     const { isOpen: isOpenData, openModal: openModalData, closeModal: closeModalData } = useModalInfo();
     const { isOpen: isOpenSession, openModal: openModalSession, closeModal: closeModalSession } = useModalSession();
+    const { isOpen: isOpenRestore, openModal: openModalRestore, closeModal: closeModalRestore } = useModalRestore();
     const [idDeleteRegister, setIdDeleteRegister] = useState<string>("");
+    const [idRestoreRegister, setIdRestoreRegister] = useState<string>("");
     const [idSessionRegister, setIdSessionRegister] = useState<string>("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -61,6 +71,8 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
                              !userHasRole(userRoles, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
     // Financeiro: somente leitura, sem botões de edição/exclusão
     const isReadOnly = isReadOnlyRole(userRoles);
+    // Administrador vê os pacientes excluídos logicamente e pode restaurá-los
+    const canManageDeleted = useCanManageDeletedRecords();
 
 
     const queryClient = useQueryClient();
@@ -168,9 +180,37 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
         }
     });
 
+    const mutationRestore = useMutation({
+        mutationFn: restoreCustomerAsync,
+        onSuccess: ({ status }) => {
+            if (status === 200) {
+                toast.success("Paciente restaurado com sucesso!", { duration: 3000 });
+                queryClient.invalidateQueries<CustomerResponseDto[]>({
+                    queryKey: ["allCustomer"],
+                });
+                closeModalRestore();
+            } else {
+                toast.error("Não foi possível restaurar o paciente.");
+            }
+        },
+        onError: () => {
+            toast.error("Erro ao restaurar o paciente. Tente novamente.", { duration: 4000 });
+        }
+    });
+
     const handleOpenModal = (customer: CustomerRequestDto) => {
         setSelectedCustomer(customer);
         openModal();
+    };
+
+    const handleOpenModalRestore = (id: string) => {
+        setIdRestoreRegister(id);
+        openModalRestore();
+    };
+
+    const handlePostRestore = (e: React.FormEvent) => {
+        e.preventDefault();
+        mutationRestore.mutate(idRestoreRegister);
     };
 
     const handleOpenModalDelete = (id: string) => {
@@ -258,6 +298,7 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
                                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
                                     Check-in Fisio
                                 </TableCell>
+                                {canManageDeleted && <DesativacaoHeaderCells />}
                                 <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
                                     Ações
                                 </TableCell>
@@ -395,11 +436,19 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
                                         })()}
                                     </TableCell>
 
+                                    {canManageDeleted && <DesativacaoBodyCells registro={customer} />}
+
                                     <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
                                         <div className="flex flex-col sm:flex-row gap-2">
-                                            {/* Se for Fisioterapeuta, mostrar apenas o botão de check-in (sessão) */}
-                                            {/* Se for perfil somente-leitura (Financeiro), não mostrar nenhum botão de ação */}
-                                            {isFisioterapeuta ? (
+                                            {/* Registro excluído logicamente: para o Administrador a única ação é restaurar */}
+                                            {canManageDeleted && customer.dataDesativacao ? (
+                                                <RestoreButton
+                                                    onClick={() => handleOpenModalRestore(customer.id!)}
+                                                    disabled={mutationRestore.isPending}
+                                                />
+                                            ) : /* Se for Fisioterapeuta, mostrar apenas o botão de check-in (sessão) */
+                                            /* Se for perfil somente-leitura (Financeiro), não mostrar nenhum botão de ação */
+                                            isFisioterapeuta ? (
                                                 <button
                                                     onClick={() => handleOpenModalSession(customer.id!)}
                                                     rel="noopener"
@@ -511,6 +560,16 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
             <Modal isOpen={isOpenSession} onClose={handleCloseModalSession} className="max-w-[700px] m-4">
                 <FormSession clienteId={idSessionRegister} closeModal={handleCloseModalSession} />
+            </Modal>
+
+            <Modal isOpen={isOpenRestore} onClose={closeModalRestore} className="max-w-[700px] m-4">
+                <RestoreConfirmContent
+                    titulo="Restaurar Paciente"
+                    mensagem="Este paciente foi excluído. Deseja restaurá-lo?"
+                    onCancel={closeModalRestore}
+                    onConfirm={handlePostRestore}
+                    isPending={mutationRestore.isPending}
+                />
             </Modal>
 
             <Modal isOpen={isOpenEmail} onClose={closeModalEmail} className="max-w-[700px] m-4">

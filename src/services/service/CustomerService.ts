@@ -80,6 +80,12 @@ export const disableCustomerAsync = async (id: string): Promise<{ status: number
     return { status: response.status };
 };
 
+// PUT - Reverter exclusão lógica de cliente (apenas Administrador)
+export const restoreCustomerAsync = async (id: string): Promise<{ status: number }> => {
+    const response = await instanceApi.put(`/Customer/ReativarCliente/${id}`);
+    return { status: response.status };
+};
+
 // POST - Enviar arquivo Excel para importar clientes
 export const postCustomerFromExcelAsync = async (file: File): Promise<{ status: number }> => {
     const formData = new FormData();

@@ -17,6 +17,13 @@ import { BranchOfficeService } from "../../../services/service/BranchOfficeServi
 import EmployeeService from "../../../services/service/EmployeeService";
 import Button from "../../ui/button/Button";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import {
+  DesativacaoBodyCells,
+  DesativacaoHeaderCells,
+  RestoreButton,
+  RestoreConfirmContent,
+  useCanManageDeletedRecords,
+} from "../shared/DesativacaoColumns";
 
 interface BranchOfficeGridProps {
   searchTerm?: string;
@@ -32,10 +39,18 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
     openModal: openModalDelete,
     closeModal: closeModalDelete,
   } = useModal();
+  const {
+    isOpen: isOpenRestore,
+    openModal: openModalRestore,
+    closeModal: closeModalRestore,
+  } = useModal();
   const [idDeleteRegister, setIdDeleteRegister] = useState<string>("");
+  const [idRestoreRegister, setIdRestoreRegister] = useState<string>("");
 
   const queryClient = useQueryClient();
   const isReadOnly = isReadOnlyRole(getUserRoleFromToken(localStorage.getItem("token")));
+  // Administrador vê as unidades excluídas logicamente e pode restaurá-las
+  const canManageDeleted = useCanManageDeletedRecords();
 
   const {
     data: branches = [],
@@ -73,6 +88,18 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
     },
     onError: () => {
       toast.error("Erro ao desativar unidade.");
+    },
+  });
+
+  const mutationRestore = useMutation({
+    mutationFn: BranchOfficeService.restore,
+    onSuccess: () => {
+      toast.success("Unidade restaurada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["allBranchOffice"] });
+      closeModalRestore();
+    },
+    onError: () => {
+      toast.error("Erro ao restaurar unidade.");
     },
   });
 
@@ -121,6 +148,16 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
   const handlePostDelete = async (e: React.FormEvent) => {
     e.preventDefault();
     mutationDelete.mutate(idDeleteRegister);
+  };
+
+  const handleOpenModalRestore = (id: string) => {
+    setIdRestoreRegister(id);
+    openModalRestore();
+  };
+
+  const handlePostRestore = (e: React.FormEvent) => {
+    e.preventDefault();
+    mutationRestore.mutate(idRestoreRegister);
   };
 
   if (isLoading || isLoadingFuncionarios)
@@ -179,6 +216,7 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
                 >
                   Observação
                 </TableCell>
+                {canManageDeleted && <DesativacaoHeaderCells />}
                 <TableCell
                   isHeader
                   className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
@@ -213,8 +251,16 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
                       {branch.observacao}
                     </TableCell>
 
+                    {canManageDeleted && <DesativacaoBodyCells registro={branch} />}
+
                     <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                      {!isReadOnly && (
+                      {/* Registro excluído logicamente: para o Administrador a única ação é restaurar */}
+                      {canManageDeleted && branch.dataDesativacao ? (
+                        <RestoreButton
+                          onClick={() => handleOpenModalRestore(branch.id!)}
+                          disabled={mutationRestore.isPending}
+                        />
+                      ) : !isReadOnly && (
                       <div className="flex flex-col sm:flex-row gap-2">
                         <button
                           onClick={() => handleOpenModal(branch)}
@@ -274,6 +320,16 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
           data={selectedBranch}
           edit={!!selectedBranch?.id}
           closeModal={closeModal}
+        />
+      </Modal>
+
+      <Modal isOpen={isOpenRestore} onClose={closeModalRestore} className="max-w-[700px] m-4">
+        <RestoreConfirmContent
+          titulo="Restaurar Unidade"
+          mensagem="Esta unidade foi excluída. Deseja restaurá-la?"
+          onCancel={closeModalRestore}
+          onConfirm={handlePostRestore}
+          isPending={mutationRestore.isPending}
         />
       </Modal>
 

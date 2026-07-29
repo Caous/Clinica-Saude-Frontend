@@ -12,11 +12,19 @@ import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
 import { useModal } from "../../../hooks/useModal";
 import { useModal as useModelDelete } from "../../../hooks/useModal";
+import { useModal as useModalRestore } from "../../../hooks/useModal";
 import { useState, useMemo } from "react";
 import FormSubCategoryService from "../../../pages/Forms/ServicesForms/FormSubCategoryService";
 import { SubCategoryServiceResponseDto } from "../../../services/model/Dto/Response/SubCategoryServiceResponseDto";
-import { getAllSubCategoriasAsync, desativarSubCategoriaAsync, getSubCategoriaByIdAsync } from "../../../services/service/SubCategoryService";
+import { getAllSubCategoriasAsync, desativarSubCategoriaAsync, getSubCategoriaByIdAsync, reativarSubCategoriaAsync } from "../../../services/service/SubCategoryService";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import {
+    DesativacaoBodyCells,
+    DesativacaoHeaderCells,
+    RestoreButton,
+    RestoreConfirmContent,
+    useCanManageDeletedRecords,
+} from "../shared/DesativacaoColumns";
 
 interface SubServiceCategoryGridProps {
     searchTerm?: string;
@@ -31,7 +39,10 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
         valorServico: 0
     });
     const [idDeleteRegister, setIdDeleteRegister] = useState<string>("");
+    const [idRestoreRegister, setIdRestoreRegister] = useState<string>("");
     const isReadOnly = isReadOnlyRole(getUserRoleFromToken(localStorage.getItem("token")));
+    // Administrador vê os sub-serviços excluídos logicamente e pode restaurá-los
+    const canManageDeleted = useCanManageDeletedRecords();
 
 
 
@@ -51,9 +62,18 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
         },
     });
 
+    const mutationRestore = useMutation({
+        mutationFn: reativarSubCategoriaAsync,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["getAllSubCategoryService"] });
+            closeModalRestore();
+        },
+    });
+
     // MODAIS -----------------------------
     const { isOpen, openModal, closeModal } = useModal();
     const { isOpen: isOpenDelete, openModal: openModalDelete, closeModal: closeModalDelete } = useModelDelete();
+    const { isOpen: isOpenRestore, openModal: openModalRestore, closeModal: closeModalRestore } = useModalRestore();
 
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10; // ou qualquer número que você quiser por página
@@ -104,6 +124,16 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
     const handleOpenModalDelete = (id: string) => {
         setIdDeleteRegister(id);
         openModalDelete();
+    };
+
+    const handleOpenModalRestore = (id: string) => {
+        setIdRestoreRegister(id);
+        openModalRestore();
+    };
+
+    const handlePostRestore = (e: React.FormEvent) => {
+        e.preventDefault();
+        mutationRestore.mutate(idRestoreRegister);
     };
 
     const handlePostDelete = async (e: React.FormEvent) => {
@@ -166,6 +196,7 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
                                 >
                                     Status
                                 </TableCell>
+                                {canManageDeleted && <DesativacaoHeaderCells />}
                                 <TableCell
                                     isHeader
                                     className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
@@ -212,8 +243,16 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
                                                 : "Desativado"}
                                         </Badge>
                                     </TableCell>
+                                    {canManageDeleted && <DesativacaoBodyCells registro={subCategory} />}
+
                                     <TableCell className="px-4 py-3 text-gray-500 text-theme-sm dark:text-gray-400">
-                                        {!isReadOnly && (
+                                        {/* Registro excluído logicamente: para o Administrador a única ação é restaurar */}
+                                        {canManageDeleted && subCategory.dataDesativacao ? (
+                                            <RestoreButton
+                                                onClick={() => handleOpenModalRestore(subCategory.id!.toString())}
+                                                disabled={mutationRestore.isPending}
+                                            />
+                                        ) : !isReadOnly && (
                                         <div className="flex flex-col sm:flex-row gap-2">
                                             <button
                                                 onClick={() => handleOpenModal(subCategory.id!.toString())}
@@ -263,6 +302,16 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
                     <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
                         <FormSubCategoryService data={formDataResponse} edit={!!formDataResponse?.id} closeModal={closeModal} />
                     </div>
+                </Modal>
+
+                <Modal isOpen={isOpenRestore} onClose={closeModalRestore} className="max-w-[700px] m-4">
+                    <RestoreConfirmContent
+                        titulo="Restaurar Sub-Serviço"
+                        mensagem="Este sub-serviço foi excluído. Deseja restaurá-lo?"
+                        onCancel={closeModalRestore}
+                        onConfirm={handlePostRestore}
+                        isPending={mutationRestore.isPending}
+                    />
                 </Modal>
 
                 <Modal isOpen={isOpenDelete} onClose={closeModalDelete} className="max-w-[700px] m-4">

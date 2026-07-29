@@ -62,6 +62,16 @@ export const desativarCategoriaAsync = async (
   return response.data;
 };
 
+// Reverte a exclusão lógica (apenas Administrador)
+export const reativarCategoriaAsync = async (
+  id: string
+): Promise<{ status: number }> => {
+  const response = await instanceApi.put(
+    `/CategoryService/ReativarCategoria/${id}`
+  );
+  return { status: response.status };
+};
+
 export const deletarCategoriaAsync = async (
   id: string
 ): Promise<string> => {

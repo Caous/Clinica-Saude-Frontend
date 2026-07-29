@@ -29,6 +29,12 @@ export const EmployeeService = {
 
   async disable(id: string): Promise<void> {
     await instanceApi.put(`${endpoint}/Desativarfuncionario/${id}`);
+  },
+
+  // Reverte a exclusão lógica (apenas Administrador).
+  // Não devolve o acesso de login — isso exige reset de senha.
+  async restore(id: string): Promise<void> {
+    await instanceApi.put(`${endpoint}/ReativarFuncionario/${id}`);
   }
 };
 
