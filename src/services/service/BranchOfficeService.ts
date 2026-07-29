@@ -30,5 +30,10 @@ export const BranchOfficeService = {
 
     async disable(id: string): Promise<void> {
         await instanceApi.put(`${baseUrl}/DesativarFilial/${id}`);
+    },
+
+    // Reverte a exclusão lógica (apenas Administrador)
+    async restore(id: string): Promise<void> {
+        await instanceApi.put(`${baseUrl}/ReativarFilial/${id}`);
     }
 };
