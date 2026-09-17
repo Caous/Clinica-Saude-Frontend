@@ -41,6 +41,12 @@ const colunaPaciente: ColunaInsight = {
   valor: (item) => item.clienteNome,
 };
 
+/** Clínica opera em 4 unidades; a lista precisa dizer para qual encaminhar. */
+const colunaUnidade: ColunaInsight = {
+  titulo: "Unidade",
+  valor: (item) => item.filialNome ?? "—",
+};
+
 /**
  * Registro dos insights disponíveis no front.
  *
@@ -62,6 +68,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       { titulo: "Restantes", valor: metrica("Sessões restantes"), numerica: true },
       { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
       { titulo: "Último check-in", valor: metrica("Último check-in") },
+      colunaUnidade,
     ],
   },
 
@@ -80,6 +87,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       { titulo: "Dias sem vir", valor: metrica("Dias sem check-in"), numerica: true },
       { titulo: "Restantes", valor: metrica("Sessões restantes"), numerica: true },
       { titulo: "Último check-in", valor: dataBr },
+      colunaUnidade,
     ],
   },
 
@@ -97,6 +105,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       { titulo: "Idade", valor: metrica("Idade"), numerica: true },
       { titulo: "Plano ativo", valor: metrica("Plano ativo") },
       { titulo: "Nascimento", valor: dataBr },
+      colunaUnidade,
     ],
   },
 
@@ -114,6 +123,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       { titulo: "Valor", valor: moedaBr, numerica: true },
       { titulo: "Dias em atraso", valor: metrica("Dias em atraso"), numerica: true },
       { titulo: "Vencimento", valor: dataBr },
+      colunaUnidade,
     ],
   },
 
@@ -131,6 +141,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       colunaPaciente,
       { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
       { titulo: "Concluído em", valor: dataBr },
+      colunaUnidade,
     ],
   },
 
@@ -147,6 +158,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       colunaPaciente,
       { titulo: "Data da falta", valor: dataBr },
       { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
+      colunaUnidade,
     ],
   },
 
@@ -162,6 +174,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     colunas: [
       colunaPaciente,
       { titulo: "Horário", valor: (item) => (item.data ? new Date(item.data).toLocaleString("pt-BR") : "—") },
+      colunaUnidade,
     ],
   },
 
@@ -179,6 +192,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       colunaPaciente,
       { titulo: "Valor", valor: moedaBr, numerica: true },
       { titulo: "Vencimento", valor: dataBr },
+      colunaUnidade,
     ],
   },
 
@@ -195,6 +209,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       colunaPaciente,
       { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
       { titulo: "Plano aberto em", valor: dataBr },
+      colunaUnidade,
     ],
   },
 };

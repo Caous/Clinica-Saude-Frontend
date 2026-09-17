@@ -45,6 +45,8 @@ export interface InsightItem {
   clienteId?: string | null;
   clienteNome: string;
   telefone?: string | null;
+  /** Unidade do paciente — para o time saber a qual unidade encaminhar. */
+  filialNome?: string | null;
   valor?: number | null;
   data?: string | null;
   /** Métricas específicas do insight, já formatadas pelo backend. */
