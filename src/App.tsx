@@ -22,6 +22,7 @@ import Documentacao from "./pages/Documentation/Documentacao";
 import DashboardLead from "./pages/Dashboard/DashboardLead";
 import ProtectedRoute from "./ProtectedRoute";
 import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
+import InsightDetalhe from "./pages/Insights/InsightDetalhe";
 import { MENU_PERMISSIONS } from "./services/util/rolePermissions";
 import CustomerTables from "./pages/Tables/CustomerTable/CustomerTables";
 import ServiceCategoryTables from "./pages/Tables/ServicesTable/ServiceCategoryTables";
@@ -77,6 +78,14 @@ export default function App() {
 
           {/* Forms */}
           <Route path="/customer" element={<CustomerTables />} />
+          <Route
+            path="/insights/:chave"
+            element={
+              <RoleProtectedRoute requiredPermissions={MENU_PERMISSIONS.INSIGHTS_VENDAS}>
+                <InsightDetalhe />
+              </RoleProtectedRoute>
+            }
+          />
 
           {/* Financeiro - Apenas para Administradores */}
           <Route 

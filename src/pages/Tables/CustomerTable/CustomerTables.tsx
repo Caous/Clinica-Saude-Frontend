@@ -12,6 +12,8 @@ import { useState } from "react";
 import { CustomerFilterRequestDto } from "../../../services/model/Dto/Request/CustomerFilterRequestDto";
 import InputMask from "react-input-mask";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import InsightStrip from "../../../components/insights/InsightStrip";
+import { INSIGHTS_DA_TELA_CLIENTE } from "../../../config/insightsRegistry";
 
 type SortField = 'nome' | 'sessoes' | 'status' | null;
 type SortDirection = 'asc' | 'desc';
@@ -119,6 +121,8 @@ export default function CustomerTables() {
       />
 
       <PageBreadcrumb pageTitle="Pacientes Instituto Barros" />
+
+      <InsightStrip chaves={INSIGHTS_DA_TELA_CLIENTE} titulo="Oportunidades de hoje" />
 
       <div className="flex justify-between items-start gap-6 mb-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">
