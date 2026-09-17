@@ -116,17 +116,105 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
       { titulo: "Vencimento", valor: dataBr },
     ],
   },
+
+  PlanoZeradoSemRenovar: {
+    chave: "PlanoZeradoSemRenovar",
+    titulo: "Terminaram e sumiram",
+    descricao:
+      "Pacientes que concluíram o plano e não abriram nenhum plano novo depois. Oportunidade de renovação já perdida no prazo, mas ainda recuperável.",
+    acao: "Oferecer novo plano",
+    escopo: "cliente",
+    mensagemWhatsapp:
+      "Olá! Aqui é do Instituto Barros 😀 Você concluiu seu plano conosco. Vamos montar a próxima etapa do seu tratamento?",
+    diasPadrao: 3,
+    colunas: [
+      colunaPaciente,
+      { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
+      { titulo: "Concluído em", valor: dataBr },
+    ],
+  },
+
+  FaltouOntem: {
+    chave: "FaltouOntem",
+    titulo: "Faltaram ontem",
+    descricao:
+      "Pacientes que não compareceram à sessão de ontem. Ligar hoje, enquanto ainda é o assunto do dia, é o que reduz a chance de abandono.",
+    acao: "Remarcar",
+    escopo: "cliente",
+    mensagemWhatsapp:
+      "Olá! Aqui é do Instituto Barros. Sentimos sua falta na sessão de ontem. Vamos remarcar?",
+    colunas: [
+      colunaPaciente,
+      { titulo: "Data da falta", valor: dataBr },
+      { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
+    ],
+  },
+
+  SessaoAmanhaNaoConfirmada: {
+    chave: "SessaoAmanhaNaoConfirmada",
+    titulo: "Amanhã sem confirmar",
+    descricao:
+      "Agendamentos de amanhã que o paciente ainda não confirmou. Confirmar hoje é a forma mais barata de derrubar o índice de falta.",
+    acao: "Confirmar",
+    escopo: "cliente",
+    mensagemWhatsapp:
+      "Olá! Aqui é do Instituto Barros. Podemos confirmar sua sessão de amanhã?",
+    colunas: [
+      colunaPaciente,
+      { titulo: "Horário", valor: (item) => (item.data ? new Date(item.data).toLocaleString("pt-BR") : "—") },
+    ],
+  },
+
+  ParcelasVence7Dias: {
+    chave: "ParcelasVence7Dias",
+    titulo: "Vencem em 7 dias",
+    descricao:
+      "Parcelas pendentes com vencimento nos próximos dias. Lembrete preventivo custa menos que cobrança depois do atraso.",
+    acao: "Lembrar",
+    escopo: "financeiro",
+    mensagemWhatsapp:
+      "Olá! Aqui é do Instituto Barros. Passando para lembrar da parcela que vence nos próximos dias.",
+    diasPadrao: 7,
+    colunas: [
+      colunaPaciente,
+      { titulo: "Valor", valor: moedaBr, numerica: true },
+      { titulo: "Vencimento", valor: dataBr },
+    ],
+  },
+
+  PlanoSemPagamento: {
+    chave: "PlanoSemPagamento",
+    titulo: "Plano sem pagamento",
+    descricao:
+      "Planos em andamento sem data de pagamento e sem nenhuma transação de recebimento vinculada. O tratamento está sendo prestado sem receita registrada.",
+    acao: "Regularizar",
+    escopo: "financeiro",
+    mensagemWhatsapp:
+      "Olá! Aqui é do Instituto Barros. Precisamos acertar o pagamento do seu plano. Podemos ajudar?",
+    colunas: [
+      colunaPaciente,
+      { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },
+      { titulo: "Plano aberto em", valor: dataBr },
+    ],
+  },
 };
 
 /** Insights exibidos na faixa da tela de Pacientes. */
 export const INSIGHTS_DA_TELA_CLIENTE: InsightChave[] = [
   "PlanoAcabando",
   "PacienteDormente",
+  "FaltouOntem",
+  "SessaoAmanhaNaoConfirmada",
   "AniversariantesHoje",
+  "PlanoZeradoSemRenovar",
 ];
 
 /** Insights exibidos na faixa da tela do Financeiro. */
-export const INSIGHTS_DA_TELA_FINANCEIRO: InsightChave[] = ["ParcelasVencidas"];
+export const INSIGHTS_DA_TELA_FINANCEIRO: InsightChave[] = [
+  "ParcelasVencidas",
+  "ParcelasVence7Dias",
+  "PlanoSemPagamento",
+];
 
 export function obterInsight(chave: string | undefined): DefinicaoInsight | undefined {
   return chave ? INSIGHTS[chave] : undefined;
