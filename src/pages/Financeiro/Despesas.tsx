@@ -16,6 +16,8 @@ import Button from "../../components/ui/button/Button";
 import Label from "../../components/form/Label";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import InsightStrip from "../../components/insights/InsightStrip";
+import { INSIGHTS_DA_TELA_FINANCEIRO } from "../../config/insightsRegistry";
 
 export default function Despesas() {
   const {
@@ -148,6 +150,8 @@ export default function Despesas() {
       <div className="grid grid-cols-1 gap-4 md:gap-6">
         <PageBreadcrumb pageTitle="Lançamentos Financeiros" />
 
+
+      <InsightStrip chaves={INSIGHTS_DA_TELA_FINANCEIRO} titulo="Cobranca" />
         {/* Header Section */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
           <div className="flex items-center justify-between mb-6">
