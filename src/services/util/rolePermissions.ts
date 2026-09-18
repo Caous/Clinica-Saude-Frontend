@@ -134,6 +134,21 @@ export const MENU_PERMISSIONS = {
     USER_ROLES.ADMINISTRADOR
   ],
 
+  // Insights de venda — perfis que trabalham a carteira comercial.
+  // Espelha o [Authorize] do InsightsController: a UI so esconde, quem barra e o backend.
+  INSIGHTS_VENDAS: [
+    USER_ROLES.ADMINISTRADOR,
+    USER_ROLES.COMERCIAL,
+    USER_ROLES.ADMINISTRATIVO,
+    USER_ROLES.COORDENADOR_FISIOTERAPEUTA
+  ],
+
+  INSIGHTS_FINANCEIRO: [
+    USER_ROLES.ADMINISTRADOR,
+    USER_ROLES.FINANCEIRO,
+    USER_ROLES.COMERCIAL
+  ],
+
   // Módulo Notificações - todos os perfis podem acessar pelo menos o histórico
   NOTIFICACOES: [
     USER_ROLES.ADMINISTRADOR,
