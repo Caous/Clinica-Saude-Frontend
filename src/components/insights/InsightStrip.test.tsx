@@ -140,6 +140,7 @@ describe("InsightStrip", () => {
    * blocos devolvem essa resiliencia sem voltar a uma requisicao por card.
    */
   it("um bloco com falha não apaga os números dos outros", async () => {
+    const user = userEvent.setup();
     contadores.mockImplementation((chaves: InsightChave[]) =>
       chaves.includes("PlanoAcabando")
         ? Promise.reject(new Error("falhou"))
@@ -148,8 +149,68 @@ describe("InsightStrip", () => {
 
     renderizar(CHAVES_DE_DOIS_BLOCOS);
 
+    // O segundo bloco cai fora das tres linhas visiveis; expandir para compara-lo com o
+    // primeiro, que e o que falhou.
+    await user.click(await screen.findByRole("button", { name: /mostrar mais/i }));
+
     expect(await screen.findAllByText("7")).toHaveLength(6);
     expect(await screen.findAllByText(/não foi possível carregar/i)).toHaveLength(6);
+  });
+
+  // ───────────── faixa recolhida ─────────────
+  // Em jsdom `window.innerWidth` é 1024, então o grid está em 2 colunas: 3 linhas = 6 cards.
+
+  it("mostra só três linhas de cards por padrão", async () => {
+    responderLote(9);
+
+    renderizar(CHAVES_DE_DOIS_BLOCOS);
+
+    await screen.findAllByText("9");
+    // 12 chaves, 6 visíveis: a faixa não pode empurrar o grid de pacientes para fora da tela.
+    expect(screen.getAllByText("9")).toHaveLength(6);
+    expect(screen.queryByText("Sem patologia")).not.toBeInTheDocument();
+  });
+
+  it("expande e recolhe o restante dos cards no clique", async () => {
+    const user = userEvent.setup();
+    responderLote(9);
+
+    renderizar(CHAVES_DE_DOIS_BLOCOS);
+
+    const alternar = await screen.findByRole("button", { name: /mostrar mais 6/i });
+    expect(alternar).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(alternar);
+
+    expect(await screen.findByText("Sem patologia")).toBeInTheDocument();
+    expect(screen.getAllByText("9")).toHaveLength(12);
+
+    const recolher = screen.getByRole("button", { name: /mostrar menos/i });
+    expect(recolher).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(recolher);
+
+    expect(screen.queryByText("Sem patologia")).not.toBeInTheDocument();
+  });
+
+  it("não oferece o botão quando tudo já cabe nas três linhas", async () => {
+    responderLote(1);
+
+    renderizar(["PlanoAcabando", "PacienteDormente", "AniversariantesHoje"]);
+
+    await screen.findAllByText("1");
+    expect(screen.queryByRole("button", { name: /mostrar mais|mostrar menos/i })).not.toBeInTheDocument();
+  });
+
+  it("busca também os contadores dos cards recolhidos, para expandir não custar espera", async () => {
+    responderLote(2);
+
+    renderizar(CHAVES_DE_DOIS_BLOCOS);
+
+    await waitFor(() => expect(contadores).toHaveBeenCalledTimes(2));
+
+    const chavesPedidas = contadores.mock.calls.flatMap((chamada) => chamada[0]);
+    expect(chavesPedidas).toHaveLength(CHAVES_DE_DOIS_BLOCOS.length);
   });
 
   /**
