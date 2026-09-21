@@ -347,3 +347,16 @@ export const canCreateCalendarEvent = (userRoles: string | string[] | null): boo
 export const canManageDeletedRecords = (userRoles: string | string[] | null): boolean => {
   return userHasRole(userRoles, USER_ROLES.ADMINISTRADOR);
 };
+
+// Função para verificar se o usuário pode exportar a base de pacientes em CSV/XLSX.
+// Restrito a Administrador: o arquivo sai com dado pessoal de toda a base (nome, CPF,
+// telefone, e-mail, endereço e patologia) e, uma vez baixado, deixa de estar sob qualquer
+// controle do sistema.
+// O perfil "TI" não existe no Identity: os papéis cadastrados são Administrador,
+// Administrativo, Cliente, Comercial, CoordenadorFisioterapeuta, Financeiro, Fisioterapeuta
+// e Funcionario. Quando ele for criado, entra nesta lista e nada mais muda.
+export const PERFIS_QUE_EXPORTAM_PACIENTES: readonly string[] = [USER_ROLES.ADMINISTRADOR];
+
+export const canExportCustomers = (userRoles: string | string[] | null): boolean => {
+  return PERFIS_QUE_EXPORTAM_PACIENTES.some((perfil) => userHasRole(userRoles, perfil));
+};
