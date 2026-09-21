@@ -8,6 +8,7 @@ import {
 } from "../../ui/table";
 import Badge from "../../ui/badge/Badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ordenarPorNomeComDesativadosNoFim } from "../../../services/util/ordenacaoDeGrid";
 import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
 import { useModal } from "../../../hooks/useModal";
@@ -105,12 +106,18 @@ export default function ServiceCategoryGrid({ searchTerm = "" }: ServiceCategory
         });
     }, [categorys, searchTerm]);
 
-    const paginatedLeads = filteredLeads.slice(
+    // Título em ordem, desativadas no fim.
+    const categoriasOrdenadas = useMemo(
+        () => ordenarPorNomeComDesativadosNoFim(filteredLeads, (category) => category.titulo),
+        [filteredLeads]
+    );
+
+    const paginatedLeads = categoriasOrdenadas.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
 
-    const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+    const totalPages = Math.ceil(categoriasOrdenadas.length / itemsPerPage);
 
     // LOADING/ERROR ----------------------
     if (isLoading) return <p className="text-black dark:text-white">Carregando...</p>;

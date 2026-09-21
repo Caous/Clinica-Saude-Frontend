@@ -10,6 +10,10 @@ import { Modal } from "../../components/ui/modal";
 import { useModal } from "../../hooks/useModal";
 import Label from "../../components/form/Label";
 import TextArea from "../../components/form/input/TextArea";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "../../components/ui/table";
+import { formatCPF, formatPhone } from "../../components/helper/formatUtils";
+import Badge from "../../components/ui/badge/Badge";
+import Button from "../../components/ui/button/Button";
 import {
   getAllCustomersWithAccessStatusAsync,
   generateSingleAccessAsync,
@@ -237,7 +241,7 @@ export default function CustomerAccessPage() {
         pageTitle="Gerenciar Acessos de Clientes"
       />
 
-      <div className="rounded-sm border border-stroke bg-white px-7.5 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
         
         {/* Estatísticas */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-5">
@@ -344,110 +348,124 @@ export default function CustomerAccessPage() {
         </div>
 
         {/* Tabela de Clientes */}
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                <th className="px-4 py-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedCustomers.length === filteredCustomers.length && filteredCustomers.length > 0}
-                    onChange={toggleSelectAll}
-                    className="cursor-pointer"
-                  />
-                </th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Nome</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">CPF</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Email</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Telefone</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white" style={{ minWidth: '160px' }}>Status de Acesso</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white" style={{ minWidth: '150px' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-10">
-                    Carregando...
-                  </td>
-                </tr>
-              ) : filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-10 text-body">
-                    Nenhum cliente encontrado
-                  </td>
-                </tr>
-              ) : (
-                paginatedCustomers.map((customer) => (
-                  <tr key={customer.id} className="border-b border-stroke dark:border-strokedark">
-                    <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedCustomers.includes(customer.id)}
-                        onChange={() => toggleSelectCustomer(customer.id)}
-                        className="cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-4 py-4 text-black dark:text-white">{customer.nome}</td>
-                    <td className="px-4 py-4">{customer.cpf}</td>
-                    <td className="px-4 py-4">{customer.email || "Não informado"}</td>
-                    <td className="px-4 py-4">{customer.nrTelefone || "Não informado"}</td>
-                    
-                    {/* Status de Acesso */}
-                    <td className="px-4 py-4" style={{ minWidth: '160px' }}>
-                      {customer.hasAccess && !customer.isAccessDisabled ? (
-                        <span className="inline-flex rounded bg-success bg-opacity-10 py-1 px-3 text-sm font-medium text-success">
-                          ✓ Com Acesso
-                        </span>
-                      ) : customer.isAccessDisabled ? (
-                        <span className="inline-flex rounded bg-danger bg-opacity-10 py-1 px-3 text-sm font-medium text-danger">
-                          ✗ Desabilitado
-                        </span>
-                      ) : (
-                        <span className="inline-flex rounded bg-warning bg-opacity-10 py-1 px-3 text-sm font-medium text-warning">
-                          ⚠ Sem Acesso
-                        </span>
-                      )}
-                    </td>
-                    
-                    {/* Ações */}
-                    <td className="px-4 py-4" style={{ minWidth: '150px' }}>
-                      {customer.hasAccess && !customer.isAccessDisabled ? (
-                        // Cliente COM acesso ativo
-                        <button
-                          onClick={() => handleDisableAccess(customer.id, customer.nome)}
-                          disabled={processing}
-                          className="inline-flex items-center justify-center gap-2 rounded-md bg-red-600 hover:bg-red-700 py-2 px-4 text-center font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <TrashBinIcon className="size-4" />
-                          Desabilitar
-                        </button>
-                      ) : (
-                        // Cliente SEM acesso ou desabilitado
-                        <button
-                          onClick={() => handleGenerateSingle(customer.id, customer.nome)}
-                          disabled={processing || (customer.estrangeiro && !customer.cpf)}
-                          className="inline-flex items-center justify-center gap-2 rounded-md bg-green-600 hover:bg-green-700 py-2 px-4 text-center font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {customer.isAccessDisabled ? (
-                            <>
-                              <CheckLineIcon className="size-4" />
-                              Reativar
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircleIcon className="size-4" />
-                              Gerar Acesso
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+          <div className="max-w-full overflow-x-auto">
+            <Table className="table-auto">
+              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
+                <TableRow>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.length === filteredCustomers.length && filteredCustomers.length > 0}
+                      onChange={toggleSelectAll}
+                      className="cursor-pointer"
+                      aria-label="Selecionar todos os clientes da página"
+                    />
+                  </TableCell>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    Nome
+                  </TableCell>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    CPF
+                  </TableCell>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    E-mail
+                  </TableCell>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    Telefone
+                  </TableCell>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    Status de Acesso
+                  </TableCell>
+                  <TableCell isHeader className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    Ações
+                  </TableCell>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                {loading ? (
+                  <TableRow>
+                    <TableCell className="px-4 py-10 text-center text-theme-sm text-gray-500 dark:text-gray-400">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredCustomers.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="px-4 py-10 text-center text-theme-sm text-gray-500 dark:text-gray-400">
+                      Nenhum cliente encontrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="px-4 py-3 text-start">
+                        <input
+                          type="checkbox"
+                          checked={selectedCustomers.includes(customer.id)}
+                          onChange={() => toggleSelectCustomer(customer.id)}
+                          className="cursor-pointer"
+                          aria-label={`Selecionar ${customer.nome}`}
+                        />
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-start text-theme-sm text-gray-800 dark:text-white/90">
+                        {customer.nome}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-start text-theme-sm text-gray-500 dark:text-gray-400">
+                        {formatCPF(customer.cpf)}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-start text-theme-sm text-gray-500 dark:text-gray-400">
+                        {customer.email || "Não informado"}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-start text-theme-sm text-gray-500 dark:text-gray-400">
+                        {formatPhone(customer.nrTelefone) || "Não informado"}
+                      </TableCell>
+
+                      <TableCell className="px-4 py-3 text-start">
+                        {customer.hasAccess && !customer.isAccessDisabled ? (
+                          <Badge size="sm" color="success">Com acesso</Badge>
+                        ) : customer.isAccessDisabled ? (
+                          <Badge size="sm" color="error">Desabilitado</Badge>
+                        ) : (
+                          <Badge size="sm" color="warning">Sem acesso</Badge>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="px-4 py-3 text-start">
+                        {customer.hasAccess && !customer.isAccessDisabled ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={processing}
+                            startIcon={<TrashBinIcon className="size-4" />}
+                            onClick={() => handleDisableAccess(customer.id, customer.nome)}
+                          >
+                            Desabilitar
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={processing || (customer.estrangeiro && !customer.cpf)}
+                            startIcon={
+                              customer.isAccessDisabled ? (
+                                <CheckLineIcon className="size-4" />
+                              ) : (
+                                <CheckCircleIcon className="size-4" />
+                              )
+                            }
+                            onClick={() => handleGenerateSingle(customer.id, customer.nome)}
+                          >
+                            {customer.isAccessDisabled ? "Reativar" : "Gerar acesso"}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <PaginationBar />

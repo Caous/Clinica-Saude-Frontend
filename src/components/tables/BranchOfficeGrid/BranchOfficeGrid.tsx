@@ -9,6 +9,7 @@ import { Modal } from "../../ui/modal";
 import { useModal } from "../../../hooks/useModal";
 import { useState, useMemo } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { ordenarPorNomeComDesativadosNoFim } from "../../../services/util/ordenacaoDeGrid";
 import toast from "react-hot-toast";
 
 import { BranchOfficeResponseDto } from "../../../services/model/Dto/Response/BranchOfficeResponseDto";
@@ -104,6 +105,10 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
     },
   });
 
+  // Nome da unidade em ordem, desativadas no fim.
+  const ordenarUnidades = (unidades: typeof branches) =>
+    ordenarPorNomeComDesativadosNoFim(unidades, (branch) => branch.nomeFilial);
+
   // Filtro inteligente com múltiplos campos - DEVE estar ANTES dos returns condicionais
   const filteredBranches = useMemo(() => {
     if (!Array.isArray(branches) || branches.length === 0) {
@@ -111,12 +116,12 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
     }
 
     if (!searchTerm || searchTerm.trim() === '') {
-      return branches;
+      return ordenarUnidades(branches);
     }
 
     const normalizedSearch = searchTerm.toLowerCase().trim();
 
-    return branches.filter((branch) => {
+    return ordenarUnidades(branches.filter((branch) => {
       // Campos para busca
       const nome = branch.nomeFilial?.toLowerCase() || '';
       const endereco = branch.endereco?.rua?.toLowerCase() || '';
@@ -133,7 +138,7 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
         observacao.includes(normalizedSearch) ||
         gerenteNome.includes(normalizedSearch)
       );
-    });
+    }));
   }, [branches, searchTerm, funcionarios]);
 
   const handleOpenModal = (branch: BranchOfficeResponseDto) => {

@@ -10,6 +10,7 @@ import { Modal } from "../../ui/modal";
 import { useModal } from "../../../hooks/useModal";
 import { useEffect, useState, useMemo } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
+import { ordenarPorNomeComDesativadosNoFim } from "../../../services/util/ordenacaoDeGrid";
 import toast from "react-hot-toast";
 import { EmployeeResponseDto } from "../../../services/model/Dto/Response/EmployeeResponseDto";
 import EmployeeService from "../../../services/service/EmployeeService";
@@ -111,16 +112,23 @@ export default function EmployeeGrid({ searchTerm = "" }: EmployeeGridProps) {
         });
     }, [employees, searchTerm]);
 
+    // Nome em ordem, desativados no fim. Quem foi desligado continua consultável, mas não
+    // disputa as primeiras linhas com a equipe ativa.
+    const employeesOrdenados = useMemo(
+        () => ordenarPorNomeComDesativadosNoFim(filteredEmployees, (employee) => employee.nome),
+        [filteredEmployees]
+    );
+
     // Paginação
     const paginatedEmployees = useMemo(() => {
-        if (!Array.isArray(filteredEmployees) || filteredEmployees.length === 0) {
+        if (!Array.isArray(employeesOrdenados) || employeesOrdenados.length === 0) {
             return [];
         }
-        return filteredEmployees.slice(
+        return employeesOrdenados.slice(
             (currentPage - 1) * itemsPerPage,
             currentPage * itemsPerPage
         );
-    }, [filteredEmployees, currentPage, itemsPerPage]);
+    }, [employeesOrdenados, currentPage, itemsPerPage]);
 
     const totalPages = useMemo(() => {
         return Math.ceil((filteredEmployees?.length || 0) / itemsPerPage);

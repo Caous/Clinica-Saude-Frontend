@@ -29,6 +29,7 @@ import toast from "react-hot-toast";
 import { formatPhone, formatCPF, formatDate } from "../../helper/formatUtils";
 import { exportTable, type ColunaExport, type FormatoExport } from "../../../utils/exportTable";
 import { rotuloDeStatusDoPaciente } from "../../../services/util/customerStatus";
+import { compararPorNome, estaDesativado } from "../../../services/util/ordenacaoDeGrid";
 import FormMetaDataCustomer from "../../../pages/Forms/Customer/FormMetaDataCustomer";
 import FormSession from "../../../pages/Forms/OrderServiceForms/FormSession";
 import { CustomerFilterRequestDto } from "../../../services/model/Dto/Request/CustomerFilterRequestDto";
@@ -103,15 +104,21 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
         let sortedClientes = [...clientes];
 
-        // Aplicar ordenação se houver
-        if (sortField && sortDirection) {
-            sortedClientes.sort((a, b) => {
+        sortedClientes.sort((a, b) => {
+            // Desativado sempre no fim, qualquer que seja a coluna escolhida: o registro
+            // continua consultavel e restauravel, mas nao disputa as primeiras linhas com
+            // quem esta ativo.
+            const desativacao = Number(estaDesativado(a)) - Number(estaDesativado(b));
+            if (desativacao !== 0) return desativacao;
+
+            // Sem coluna escolhida, a ordem util e o nome — nao a ordem crua da API.
+            if (!sortField || !sortDirection) return compararPorNome(a.nome, b.nome);
+
+            {
                 let compareValue = 0;
 
                 if (sortField === 'nome') {
-                    const nomeA = a.nome?.toLowerCase() || '';
-                    const nomeB = b.nome?.toLowerCase() || '';
-                    compareValue = nomeA.localeCompare(nomeB);
+                    compareValue = compararPorNome(a.nome, b.nome);
                 } else if (sortField === 'sessoes') {
                     // Calcula quantidade de sessões Plano realizadas para cada paciente
                     const sessoesA = (a.servicos ?? [])
@@ -143,8 +150,8 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
                 // Inverte se for descendente
                 return sortDirection === 'asc' ? compareValue : -compareValue;
-            });
-        }
+            }
+        });
 
         return sortedClientes;
     }, [clientes, sortField, sortDirection]);
