@@ -88,7 +88,15 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
     })
 
     // Paginação
-    const paginatedClientes = useMemo(() => {
+    /**
+     * A lista inteira do filtro, na ordem escolhida no cabeçalho.
+     *
+     * Separada da paginação porque a exportação também precisa dela: o arquivo sai com todas
+     * as linhas do filtro, mas na mesma ordem que está na tela. Enquanto ordenar e paginar
+     * eram o mesmo passo, exportar entregava a ordem crua da API e o arquivo não batia com o
+     * que o usuário tinha acabado de ordenar.
+     */
+    const clientesOrdenados = useMemo(() => {
         if (!Array.isArray(clientes) || clientes.length === 0) {
             return [];
         }
@@ -138,11 +146,17 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
             });
         }
 
-        return sortedClientes.slice(
-            (currentPage - 1) * itemsPerPage,
-            currentPage * itemsPerPage
-        );
-    }, [clientes, currentPage, itemsPerPage, sortField, sortDirection]);
+        return sortedClientes;
+    }, [clientes, sortField, sortDirection]);
+
+    const paginatedClientes = useMemo(
+        () =>
+            clientesOrdenados.slice(
+                (currentPage - 1) * itemsPerPage,
+                currentPage * itemsPerPage
+            ),
+        [clientesOrdenados, currentPage, itemsPerPage]
+    );
 
     const totalPages = useMemo(() => {
         return Math.ceil((clientes?.length || 0) / itemsPerPage);
@@ -292,8 +306,9 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
      * Sem ida à rede: a listagem já está em memória, e refazer a busca traria o risco de o
      * arquivo divergir da tela entre um clique e outro.
      */
-    // `getAllCustomersAsync` devolve null em falha; o `= []` do useQuery so cobre undefined.
-    const pacientes: CustomerResponseDto[] = clientes ?? [];
+    // Todas as linhas do filtro, na ordem da tela. Exportar so a pagina aberta nao serviria
+    // para nada; exportar fora de ordem faria o arquivo nao bater com o grid.
+    const pacientes: CustomerResponseDto[] = clientesOrdenados;
 
     const exportar = (formato: FormatoExport) => {
         try {
