@@ -2,7 +2,7 @@ import type { InsightChave, InsightItem } from "../services/model/insights.types
 import { formatCPF, formatPhone } from "../components/helper/formatUtils";
 
 /** Em qual tela o contador do insight aparece. */
-export type EscopoInsight = "cliente" | "financeiro" | "qualidade";
+export type EscopoInsight = "cliente" | "financeiro" | "qualidade" | "funcionario";
 
 export interface ColunaInsight {
   titulo: string;
@@ -19,7 +19,7 @@ export interface ColunaInsight {
  * Insight de qualidade nunca é `whatsapp`: metade da lista de "Telefone em branco" não tem
  * telefone justamente por isso.
  */
-export type TipoDeAcaoInsight = "whatsapp" | "cadastro";
+export type TipoDeAcaoInsight = "whatsapp" | "cadastro" | "fichaDeFuncionario";
 
 export interface DefinicaoInsight {
   chave: InsightChave;
@@ -152,6 +152,56 @@ const colunasDeCadastro: ColunaInsight[] = [
   colunaTelefone,
   colunaCadastradoEm,
   colunaCadastradoPor,
+  colunaUnidade,
+];
+
+const colunaCargo: ColunaInsight = {
+  titulo: "Cargo",
+  valor: metrica("Cargo"),
+};
+
+const colunaNascimento: ColunaInsight = {
+  titulo: "Nascimento",
+  valor: metrica("Nascimento"),
+};
+
+const colunaIdade: ColunaInsight = {
+  titulo: "Idade",
+  valor: metrica("Idade"),
+  numerica: true,
+};
+
+/**
+ * Insight de cadastro de funcionário.
+ *
+ * Mesma ideia da fábrica de qualidade do paciente, com dois pontos próprios: a ação abre a
+ * ficha do funcionário, não a do paciente, e a coluna de unidade sai — quase todos esses
+ * cards existem justamente porque a ficha está incompleta, e a unidade é um dos campos que
+ * pode estar faltando.
+ */
+function funcionario(
+  chave: InsightChave,
+  titulo: string,
+  descricao: string,
+  colunas: ColunaInsight[]
+): DefinicaoInsight {
+  return {
+    chave,
+    titulo,
+    descricao,
+    acao: "Abrir ficha",
+    tipoAcao: "fichaDeFuncionario",
+    escopo: "funcionario",
+    colunas,
+  };
+}
+
+/** Colunas dos cards de campo em branco da ficha de funcionário. */
+const colunasDeFicha: ColunaInsight[] = [
+  colunaPaciente,
+  colunaCargo,
+  colunaTelefone,
+  colunaEmail,
   colunaUnidade,
 ];
 
@@ -554,6 +604,80 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     colunasDeCadastro
   ),
 
+  // ─────────────── cadastro de funcionário ───────────────
+  // Contam apenas funcionários ativos. Hoje oito destes dez cards nascem zerados: o valor
+  // aqui é de vigilância, para o próximo cadastro torto aparecer no mesmo dia.
+
+  FuncionarioAniversarianteDoDia: funcionario(
+    "FuncionarioAniversarianteDoDia",
+    "Aniversariantes de hoje",
+    "Funcionários que fazem aniversário hoje. Quem não tem data de nascimento na ficha nunca aparece aqui.",
+    [colunaPaciente, colunaCargo, colunaNascimento, colunaIdade, colunaUnidade]
+  ),
+
+  FuncionarioAniversarianteDoMes: funcionario(
+    "FuncionarioAniversarianteDoMes",
+    "Aniversariantes do mês",
+    "Funcionários que fazem aniversário no mês corrente, o mês inteiro. Quem faz hoje também aparece aqui — um card é para parabenizar agora, o outro para planejar o mês.",
+    [colunaPaciente, colunaCargo, colunaNascimento, colunaIdade, colunaUnidade]
+  ),
+
+  FuncionarioCpfVazio: funcionario(
+    "FuncionarioCpfVazio",
+    "CPF em branco",
+    "Fichas de funcionário sem CPF. Sem ele não há como emitir nada no nome da pessoa.",
+    colunasDeFicha
+  ),
+
+  FuncionarioSemFilial: funcionario(
+    "FuncionarioSemFilial",
+    "Sem unidade",
+    "Funcionário sem unidade vinculada. Fica de fora da escala e de qualquer número por filial.",
+    [colunaPaciente, colunaCargo, colunaTelefone, colunaEmail]
+  ),
+
+  FuncionarioEmailVazio: funcionario(
+    "FuncionarioEmailVazio",
+    "E-mail em branco",
+    "Fichas sem e-mail. É por onde passa comunicado interno e recuperação de acesso.",
+    colunasDeFicha
+  ),
+
+  FuncionarioTelefoneVazio: funcionario(
+    "FuncionarioTelefoneVazio",
+    "Telefone em branco",
+    "Fichas sem telefone. Sem ele não há como acionar a pessoa fora do horário nem em troca de plantão.",
+    colunasDeFicha
+  ),
+
+  FuncionarioCargoVazio: funcionario(
+    "FuncionarioCargoVazio",
+    "Sem cargo",
+    "Fichas sem cargo preenchido. O cargo é o que diz quem faz o quê na escala e nos relatórios.",
+    colunasDeFicha
+  ),
+
+  FuncionarioCpfDuplicado: funcionario(
+    "FuncionarioCpfDuplicado",
+    "CPF repetido",
+    "Mesmo CPF em mais de um funcionário ativo. É o sinal mais forte de ficha duplicada — o histórico de atendimento fica dividido entre as duas.",
+    colunasDeDuplicidade(formatCPF)
+  ),
+
+  FuncionarioEmailDuplicado: funcionario(
+    "FuncionarioEmailDuplicado",
+    "E-mail repetido",
+    "Mesmo e-mail em mais de um funcionário ativo. Costuma ser a mesma pessoa cadastrada duas vezes.",
+    colunasDeDuplicidade((valor) => valor)
+  ),
+
+  FuncionarioTelefoneDuplicado: funcionario(
+    "FuncionarioTelefoneDuplicado",
+    "Telefone repetido",
+    "Mesmo telefone em mais de um funcionário ativo, já desconsiderando a máscara. Pode ser ficha duplicada ou telefone de recado compartilhado.",
+    colunasDeDuplicidade(formatPhone)
+  ),
+
   FilialNaoDefinida: qualidade(
     "FilialNaoDefinida",
     "Sem unidade",
@@ -608,6 +732,26 @@ export const INSIGHTS_DA_TELA_CLIENTE: InsightChave[] = [
   "PatologiaVazia",
   "DocumentoIdentificacaoVazio",
   "FilialNaoDefinida",
+];
+
+/**
+ * Insights exibidos na faixa da tela de Funcionários.
+ *
+ * Aniversário primeiro porque é o que tem uso diário; depois duplicidade, que é o mais grave;
+ * e por fim os campos em branco. Dez cards: com a faixa recolhida em três linhas, cabem todos
+ * no desktop e o botão de expandir aparece nas telas mais estreitas.
+ */
+export const INSIGHTS_DA_TELA_FUNCIONARIO: InsightChave[] = [
+  "FuncionarioAniversarianteDoDia",
+  "FuncionarioAniversarianteDoMes",
+  "FuncionarioCpfDuplicado",
+  "FuncionarioEmailDuplicado",
+  "FuncionarioTelefoneDuplicado",
+  "FuncionarioCpfVazio",
+  "FuncionarioEmailVazio",
+  "FuncionarioTelefoneVazio",
+  "FuncionarioCargoVazio",
+  "FuncionarioSemFilial",
 ];
 
 /** Insights exibidos na faixa da tela do Financeiro. */

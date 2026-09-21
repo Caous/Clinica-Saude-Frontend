@@ -3,6 +3,7 @@ import {
   INSIGHTS,
   INSIGHTS_DA_TELA_CLIENTE,
   INSIGHTS_DA_TELA_FINANCEIRO,
+  INSIGHTS_DA_TELA_FUNCIONARIO,
   obterInsight,
 } from "./insightsRegistry";
 import type { InsightChave } from "../services/model/insights.types";
@@ -48,6 +49,16 @@ const CHAVES_DO_BACKEND: InsightChave[] = [
   "PatologiaVazia",
   "DocumentoIdentificacaoVazio",
   "FilialNaoDefinida",
+  "FuncionarioAniversarianteDoDia",
+  "FuncionarioAniversarianteDoMes",
+  "FuncionarioCpfVazio",
+  "FuncionarioSemFilial",
+  "FuncionarioEmailVazio",
+  "FuncionarioTelefoneVazio",
+  "FuncionarioCargoVazio",
+  "FuncionarioCpfDuplicado",
+  "FuncionarioEmailDuplicado",
+  "FuncionarioTelefoneDuplicado",
 ];
 
 /** Insights de qualidade de cadastro: os que abrem a ficha em vez do WhatsApp. */
@@ -108,8 +119,10 @@ describe("insightsRegistry", () => {
   });
 
   it("insight de venda continua abrindo o WhatsApp, com mensagem pronta", () => {
+    // Qualidade de cadastro e ficha de funcionário abrem formulário; só venda e cobrança
+    // falam com a pessoa.
     Object.values(INSIGHTS)
-      .filter((definicao) => definicao.escopo !== "qualidade")
+      .filter((definicao) => definicao.escopo !== "qualidade" && definicao.escopo !== "funcionario")
       .forEach((definicao) => {
         expect(definicao.tipoAcao ?? "whatsapp").toBe("whatsapp");
         expect(definicao.mensagemWhatsapp).toBeTruthy();
@@ -161,6 +174,38 @@ describe("insightsRegistry", () => {
     const item = { referenciaId: "x", clienteNome: "Ana", metricas: {} };
 
     expect(coluna?.valor(item as never)).toBe("—");
+  });
+
+  // UT-20
+  it("insight de funcionário abre a ficha do funcionário e não oferece WhatsApp", () => {
+    const deFuncionario = Object.values(INSIGHTS).filter(
+      (definicao) => definicao.escopo === "funcionario"
+    );
+
+    expect(deFuncionario).toHaveLength(10);
+
+    deFuncionario.forEach((definicao) => {
+      expect(definicao.tipoAcao).toBe("fichaDeFuncionario");
+      expect(definicao.mensagemWhatsapp).toBeUndefined();
+      expect(definicao.acao).toBe("Abrir ficha");
+    });
+  });
+
+  it("a faixa de Funcionários traz os 10 insights de cadastro da equipe", () => {
+    expect(INSIGHTS_DA_TELA_FUNCIONARIO).toHaveLength(10);
+    expect(new Set(INSIGHTS_DA_TELA_FUNCIONARIO).size).toBe(10);
+
+    INSIGHTS_DA_TELA_FUNCIONARIO.forEach((chave) =>
+      expect(INSIGHTS[chave].escopo).toBe("funcionario")
+    );
+  });
+
+  it("nenhum insight de funcionário aparece na faixa de Pacientes", () => {
+    const repetidos = INSIGHTS_DA_TELA_FUNCIONARIO.filter((chave) =>
+      INSIGHTS_DA_TELA_CLIENTE.includes(chave)
+    );
+
+    expect(repetidos).toEqual([]);
   });
 
   it("obterInsight devolve undefined para chave desconhecida ou ausente", () => {

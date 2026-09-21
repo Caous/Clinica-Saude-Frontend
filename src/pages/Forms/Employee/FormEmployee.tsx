@@ -21,11 +21,20 @@ interface FormEmployeeProps {
   data?: EmployeeResponseDto;
   edit?: boolean;
   closeModal?: () => void;
+  /**
+   * Chamado só quando o salvamento dá certo.
+   *
+   * Existe para quem abre este formulário de fora do grid de funcionários — hoje, a tela de
+   * detalhe de insight, que precisa invalidar os contadores. Separado de `closeModal` de
+   * propósito: fechar sem salvar não pode disparar recarga nenhuma.
+   */
+  onSuccess?: () => void;
 }
 
 export default function FormEmployee({
   data,
   edit,
+  onSuccess,
   closeModal,
 }: FormEmployeeProps) {
   const { fetchCep, cepLoading } = useCepLookup();
@@ -132,6 +141,7 @@ export default function FormEmployee({
         );
 
         queryClient.invalidateQueries(["allEmployee"]);
+        if (onSuccess) onSuccess();
 
         setTimeout(() => {
           if (closeModal) closeModal();

@@ -15,6 +15,9 @@ import { montarLinkWhatsapp } from "../../utils/whatsappLink";
 import { Modal } from "../../components/ui/modal";
 import FormCustomer from "../Forms/Customer/FormCustomer";
 import { getCustomerIdAsync } from "../../services/service/CustomerService";
+import FormEmployee from "../Forms/Employee/FormEmployee";
+import { EmployeeService } from "../../services/service/EmployeeService";
+import type { EmployeeResponseDto } from "../../services/model/Dto/Response/EmployeeResponseDto";
 import type { CustomerRequestDto } from "../../services/model/Dto/Request/CustomerRequestDto";
 import type { CustomerResponseDto } from "../../services/model/Dto/Response/CustomerResponseDto";
 import type {
@@ -94,6 +97,39 @@ export default function InsightDetalhe() {
   const queryClient = useQueryClient();
   const [cadastroEmEdicao, setCadastroEmEdicao] = useState<CustomerRequestDto | null>(null);
   const [carregandoCadastro, setCarregandoCadastro] = useState<string | null>(null);
+
+  const [fichaEmEdicao, setFichaEmEdicao] = useState<EmployeeResponseDto | null>(null);
+
+  const abrirFichaDeFuncionario = async (item: InsightItem) => {
+    if (!item.clienteId) {
+      toast.error("Este item não está vinculado a um funcionário.");
+      return;
+    }
+
+    setCarregandoCadastro(item.referenciaId);
+
+    try {
+      const funcionario = await EmployeeService.getById(item.clienteId);
+
+      if (!funcionario) {
+        toast.error("Não foi possível carregar a ficha deste funcionário.");
+        return;
+      }
+
+      setFichaEmEdicao(funcionario);
+    } catch {
+      toast.error("Não foi possível carregar a ficha deste funcionário.");
+    } finally {
+      setCarregandoCadastro(null);
+    }
+  };
+
+  const fecharFicha = () => setFichaEmEdicao(null);
+
+  const aoSalvarFicha = () => {
+    queryClient.invalidateQueries({ queryKey: ["insight"] });
+    setFichaEmEdicao(null);
+  };
 
   const abrirCadastro = async (item: InsightItem) => {
     if (!item.clienteId) {
@@ -302,7 +338,9 @@ export default function InsightDetalhe() {
                   dizer que ninguem registra alta, o que e o oposto de boa noticia. */}
               {definicao.escopo === "qualidade"
                 ? "Nenhum paciente nesta condição."
-                : "Nada pendente por aqui. Bom sinal."}
+                : definicao.escopo === "funcionario"
+                  ? "Nenhum funcionário nesta condição."
+                  : "Nada pendente por aqui. Bom sinal."}
             </p>
           ) : (
             <Table>
@@ -333,7 +371,10 @@ export default function InsightDetalhe() {
                   // A acao de cadastro nao pode depender de telefone: "Telefone em branco" e
                   // "Paciente inalcancavel" listam justamente quem nao tem, e amarrar o botao
                   // ao link de WhatsApp deixaria essas filas sem nenhuma acao.
-                  const acaoDeCadastro = definicao.tipoAcao === "cadastro";
+                  // O formulário do modal sai do tipo da definição: ficha de paciente ou de
+                  // funcionário. Antes o componente estava preso ao de paciente.
+                  const acaoDeFicha = definicao.tipoAcao === "fichaDeFuncionario";
+                  const acaoDeCadastro = definicao.tipoAcao === "cadastro" || acaoDeFicha;
                   const linkWhatsapp = acaoDeCadastro
                     ? null
                     : montarLinkWhatsapp(item.telefone, definicao.mensagemWhatsapp);
@@ -356,7 +397,7 @@ export default function InsightDetalhe() {
                           {acaoDeCadastro && (
                             <button
                               type="button"
-                              onClick={() => abrirCadastro(item)}
+                              onClick={() => (acaoDeFicha ? abrirFichaDeFuncionario(item) : abrirCadastro(item))}
                               disabled={carregandoCadastro === item.referenciaId}
                               className="rounded-lg bg-brand-50 px-3 py-1.5 text-theme-xs font-medium text-brand-700 transition-colors duration-200 ease-out hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none dark:bg-brand-500/15 dark:text-brand-400"
                             >
@@ -424,6 +465,21 @@ export default function InsightDetalhe() {
             edit
             closeModal={fecharCadastro}
             onSuccess={aoSalvarCadastro}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={fichaEmEdicao !== null}
+        onClose={fecharFicha}
+        className="max-w-[700px] m-4"
+      >
+        {fichaEmEdicao && (
+          <FormEmployee
+            data={fichaEmEdicao}
+            edit
+            closeModal={fecharFicha}
+            onSuccess={aoSalvarFicha}
           />
         )}
       </Modal>

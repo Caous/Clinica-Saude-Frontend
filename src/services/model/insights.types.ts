@@ -42,7 +42,18 @@ export type InsightChave =
   | "EnderecoVazio"
   | "PatologiaVazia"
   | "DocumentoIdentificacaoVazio"
-  | "FilialNaoDefinida";
+  | "FilialNaoDefinida"
+  // Cadastro de funcionário — contam apenas funcionários ativos.
+  | "FuncionarioAniversarianteDoDia"
+  | "FuncionarioAniversarianteDoMes"
+  | "FuncionarioCpfVazio"
+  | "FuncionarioSemFilial"
+  | "FuncionarioEmailVazio"
+  | "FuncionarioTelefoneVazio"
+  | "FuncionarioCargoVazio"
+  | "FuncionarioCpfDuplicado"
+  | "FuncionarioEmailDuplicado"
+  | "FuncionarioTelefoneDuplicado";
 
 /** Urgência do insight — define a cor do card. */
 export enum InsightSeveridade {

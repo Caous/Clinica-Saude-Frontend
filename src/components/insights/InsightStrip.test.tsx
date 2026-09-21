@@ -193,6 +193,28 @@ describe("InsightStrip", () => {
     expect(screen.queryByText("Sem patologia")).not.toBeInTheDocument();
   });
 
+  // UT-21 — a faixa de Funcionários tem 10 cards; em 2 colunas, 3 linhas mostram 6.
+  it("recolhe também a faixa de Funcionários", async () => {
+    responderLote(3);
+
+    renderizar([
+      "FuncionarioAniversarianteDoDia",
+      "FuncionarioAniversarianteDoMes",
+      "FuncionarioCpfDuplicado",
+      "FuncionarioEmailDuplicado",
+      "FuncionarioTelefoneDuplicado",
+      "FuncionarioCpfVazio",
+      "FuncionarioEmailVazio",
+      "FuncionarioTelefoneVazio",
+      "FuncionarioCargoVazio",
+      "FuncionarioSemFilial",
+    ]);
+
+    await screen.findAllByText("3");
+    expect(screen.getAllByText("3")).toHaveLength(6);
+    expect(await screen.findByRole("button", { name: /mostrar mais 4/i })).toBeInTheDocument();
+  });
+
   it("não oferece o botão quando tudo já cabe nas três linhas", async () => {
     responderLote(1);
 
