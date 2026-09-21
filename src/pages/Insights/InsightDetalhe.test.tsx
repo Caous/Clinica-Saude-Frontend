@@ -40,15 +40,16 @@ function EspiaoDeUrl() {
   return <output data-testid="url">{location.pathname + location.search}</output>;
 }
 
-function renderizar(rotaInicial: string) {
+function renderizar(rotaInicial: string, rotasAnteriores: string[] = []) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const entradas = [...rotasAnteriores, rotaInicial];
 
   // PageMeta usa react-helmet-async; sem o provider o componente estoura na montagem,
   // igual ao AppWrapper que envolve a aplicacao real.
   return render(
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[rotaInicial]}>
+        <MemoryRouter initialEntries={entradas} initialIndex={entradas.length - 1}>
           <EspiaoDeUrl />
           <Routes>
             <Route path="/insights/:chave" element={<InsightDetalhe />} />
@@ -65,6 +66,66 @@ describe("InsightDetalhe", () => {
     exportacao.mockReset();
     registrarAcompanhamento.mockReset();
     exportTableMock.mockClear();
+  });
+
+  // ───────────── voltar ─────────────
+
+  it("volta para a tela anterior quando existe histórico", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "AniversariantesHoje",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 2)],
+    });
+
+    renderizar("/insights/AniversariantesHoje", ["/customer"]);
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /voltar/i }));
+
+    expect(screen.getByTestId("url")).toHaveTextContent("/customer");
+  });
+
+  /**
+   * Quem abre o insight por link direto ou recarrega a pagina nao tem tela anterior.
+   * Sem o fallback o botao ficaria ali sem fazer nada.
+   */
+  it("cai na tela de Pacientes quando o insight foi aberto direto pela URL", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "StatusNovoPaciente",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 2)],
+    });
+
+    renderizar("/insights/StatusNovoPaciente");
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /voltar/i }));
+
+    expect(screen.getByTestId("url")).toHaveTextContent("/customer");
+  });
+
+  it("insight de cobrança volta para Despesas, não para Pacientes", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "ParcelasVencidas",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 2)],
+    });
+
+    renderizar("/insights/ParcelasVencidas");
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /voltar/i }));
+
+    expect(screen.getByTestId("url")).toHaveTextContent("/financeiro/despesas");
   });
 
   it("lista os pacientes do insight com as métricas vindas da API", async () => {

@@ -1,4 +1,5 @@
 import type { InsightChave, InsightItem } from "../services/model/insights.types";
+import { formatCPF, formatPhone } from "../components/helper/formatUtils";
 
 /** Em qual tela o contador do insight aparece. */
 export type EscopoInsight = "cliente" | "financeiro" | "qualidade";
@@ -58,20 +59,36 @@ const colunaUnidade: ColunaInsight = {
   valor: (item) => item.filialNome ?? "—",
 };
 
-const colunaTelefone: ColunaInsight = {
+/** Texto padrao de celula sem conteudo, igual ao resto dos grids. */
+const SEM_CONTEUDO = "—";
+
+/**
+ * Nos insights que existem justamente por causa do campo vazio, o travessao nao comunica:
+ * parece falha de carregamento. O texto explicito diz que o cadastro e que esta incompleto.
+ */
+const SEM_DADO = "Não tem dado";
+
+const colunaTelefoneCom = (vazio: string): ColunaInsight => ({
   titulo: "Telefone",
-  valor: (item) => item.telefone?.trim() || "—",
-};
+  // Mesmo formatador do grid de pacientes e do de funcionarios: o numero precisa sair igual
+  // em toda tela, senao o mesmo paciente parece ter cadastros diferentes.
+  valor: (item) => formatPhone(item.telefone?.trim()) || vazio,
+});
 
-const colunaEmail: ColunaInsight = {
+const colunaEmailCom = (vazio: string): ColunaInsight => ({
   titulo: "E-mail",
-  valor: metrica("E-mail"),
-};
+  valor: (item) => item.metricas?.["E-mail"]?.trim() || vazio,
+});
 
-const colunaCpf: ColunaInsight = {
+const colunaTelefone = colunaTelefoneCom(SEM_CONTEUDO);
+const colunaEmail = colunaEmailCom(SEM_CONTEUDO);
+
+const colunaCpfCom = (vazio: string): ColunaInsight => ({
   titulo: "CPF",
-  valor: metrica("CPF"),
-};
+  valor: (item) => item.metricas?.["CPF"]?.trim() || vazio,
+});
+
+const colunaCpf = colunaCpfCom(SEM_CONTEUDO);
 
 const colunaCadastradoEm: ColunaInsight = {
   titulo: "Cadastrado em",
@@ -84,10 +101,20 @@ const colunaCadastradoPor: ColunaInsight = {
   valor: metrica("Cadastrado por"),
 };
 
-const colunaValorRepetido: ColunaInsight = {
+/**
+ * Coluna do valor que se repete.
+ *
+ * Recebe o formatador porque o backend devolve o valor ja normalizado -- so digitos, para os
+ * cadastros do mesmo grupo casarem. Bom para comparar, ruim de ler: o mesmo telefone aparece
+ * mascarado no card do paciente e cru aqui. O formatador devolve a leitura de sempre.
+ */
+const colunaValorRepetidoCom = (formatar: (valor: string) => string): ColunaInsight => ({
   titulo: "Valor repetido",
-  valor: metrica("Valor repetido"),
-};
+  valor: (item) => {
+    const valor = item.metricas?.["Valor repetido"];
+    return valor ? formatar(valor) : "—";
+  },
+});
 
 const colunaOcorrencias: ColunaInsight = {
   titulo: "Cadastros",
@@ -129,9 +156,9 @@ const colunasDeCadastro: ColunaInsight[] = [
 ];
 
 /** Colunas dos três cards de duplicidade — o valor repetido vem antes do resto. */
-const colunasDeDuplicidade: ColunaInsight[] = [
+const colunasDeDuplicidade = (formatar: (valor: string) => string): ColunaInsight[] => [
   colunaPaciente,
-  colunaValorRepetido,
+  colunaValorRepetidoCom(formatar),
   colunaOcorrencias,
   colunaCadastradoEm,
   colunaUnidade,
@@ -384,7 +411,15 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     "EmailVazio",
     "E-mail em branco",
     "Cadastros sem e-mail. Cada um deles fica de fora de toda comunicação por e-mail. Os pacientes sem nenhum contato também aparecem aqui e no card de telefone.",
-    [colunaPaciente, colunaTelefone, colunaCadastradoEm, colunaCadastradoPor, colunaUnidade]
+    // A coluna vazia fica: e a prova, linha a linha, do motivo de o paciente estar na fila.
+    [
+      colunaPaciente,
+      colunaEmailCom(SEM_DADO),
+      colunaTelefone,
+      colunaCadastradoEm,
+      colunaCadastradoPor,
+      colunaUnidade,
+    ]
   ),
 
   EmailInvalido: qualidade(
@@ -405,21 +440,28 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     "EmailDuplicado",
     "E-mail repetido",
     "Mesmo e-mail em mais de um cadastro. Costuma ser o mesmo paciente cadastrado duas vezes, ou o e-mail de um familiar usado para todos. A lista vem agrupada para comparar.",
-    colunasDeDuplicidade
+    colunasDeDuplicidade((valor) => valor)
   ),
 
   TelefoneVazio: qualidade(
     "TelefoneVazio",
     "Telefone em branco",
     "Cadastros sem telefone. Sem telefone não há confirmação de sessão nem resgate por WhatsApp.",
-    [colunaPaciente, colunaEmail, colunaCadastradoEm, colunaCadastradoPor, colunaUnidade]
+    [
+      colunaPaciente,
+      colunaTelefoneCom(SEM_DADO),
+      colunaEmail,
+      colunaCadastradoEm,
+      colunaCadastradoPor,
+      colunaUnidade,
+    ]
   ),
 
   TelefoneDuplicado: qualidade(
     "TelefoneDuplicado",
     "Telefone repetido",
     "Mesmo telefone em mais de um cadastro, já desconsiderando a máscara. Pode ser telefone de família ou cadastro duplicado.",
-    colunasDeDuplicidade
+    colunasDeDuplicidade(formatPhone)
   ),
 
   TelefoneDigitosIguais: qualidade(
@@ -440,7 +482,16 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     "SemEmailESemTelefone",
     "Paciente inalcançável",
     "Sem e-mail e sem telefone. A clínica não tem por onde chamar essa pessoa. É o pior caso da base e o que deve ser atacado primeiro.",
-    colunasDeCadastro
+    // As duas colunas vazias entram de proposito: e o que prova, linha a linha, por que o
+    // paciente esta nesta fila.
+    [
+      colunaPaciente,
+      colunaTelefoneCom(SEM_DADO),
+      colunaEmailCom(SEM_DADO),
+      colunaCadastradoEm,
+      colunaCadastradoPor,
+      colunaUnidade,
+    ]
   ),
 
   // --------------- qualidade de cadastro: CPF ---------------
@@ -456,7 +507,14 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     "CpfVazio",
     "CPF em branco",
     "Cadastros sem CPF. Sem ele não há emissão de recibo nem forma confiável de identificar o paciente.",
-    [colunaPaciente, colunaTelefone, colunaCadastradoEm, colunaCadastradoPor, colunaUnidade]
+    [
+      colunaPaciente,
+      colunaCpfCom(SEM_DADO),
+      colunaTelefone,
+      colunaCadastradoEm,
+      colunaCadastradoPor,
+      colunaUnidade,
+    ]
   ),
 
   CpfDigitoVerificadorInvalido: qualidade(
@@ -470,7 +528,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     "CpfDuplicado",
     "CPF repetido",
     "Mesmo CPF em mais de um cadastro. É o sinal mais forte de paciente duplicado: histórico e plano ficam divididos entre duas fichas.",
-    colunasDeDuplicidade
+    colunasDeDuplicidade(formatCPF)
   ),
 
   // --------------- qualidade de cadastro: campos nao preenchidos ---------------

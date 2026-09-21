@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { Toaster, toast } from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
@@ -25,6 +25,25 @@ import type {
 
 const TAMANHO_PAGINA = 20;
 
+/** Seta para a esquerda. `aria-hidden` porque o proprio texto do botao ja diz "Voltar". */
+function IconeDeVoltar() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </svg>
+  );
+}
+
 /**
  * Converte o paciente vindo da API no formato que o formulario edita.
  *
@@ -48,6 +67,7 @@ export default function InsightDetalhe() {
   const { chave } = useParams<{ chave: string }>();
   const navigate = useNavigate();
   const [parametros, setParametros] = useSearchParams();
+  const location = useLocation();
 
   const definicao = obterInsight(chave);
 
@@ -106,6 +126,30 @@ export default function InsightDetalhe() {
     // numero na faixa continua acusando um problema que ja foi resolvido.
     queryClient.invalidateQueries({ queryKey: ["insight"] });
     setCadastroEmEdicao(null);
+  };
+
+  /**
+   * Para onde o botao de voltar leva quando nao ha historico.
+   *
+   * O insight e sempre aberto a partir da faixa de alguma tela, e e para ela que "voltar"
+   * precisa levar. Insight de venda e de qualidade de cadastro moram na tela de Pacientes;
+   * os de cobranca, na de Despesas.
+   */
+  const telaDeOrigem = definicao?.escopo === "financeiro" ? "/financeiro/despesas" : "/customer";
+
+  /**
+   * Volta uma pagina no historico quando existe, e cai na tela de origem quando nao existe.
+   *
+   * Sem o fallback, quem abre o insight por link direto ou recarrega a pagina ficaria com um
+   * botao que nao faz nada. Com ele, `navigate(-1)` ainda e preferido porque preserva o estado
+   * da tela anterior -- filtro do grid, posicao de rolagem, faixa expandida.
+   */
+  const voltar = () => {
+    // `key` e "default" apenas na primeira entrada da pilha: e como o react-router diz que
+    // nao existe tela anterior dentro da aplicacao. Checar `window.history.length` acusaria
+    // qualquer pagina visitada antes no navegador, inclusive de outro site.
+    if (location.key !== "default") navigate(-1);
+    else navigate(telaDeOrigem);
   };
 
   if (!definicao) {
@@ -199,7 +243,10 @@ export default function InsightDetalhe() {
             </p>
           </div>
 
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button variant="outline" onClick={voltar} startIcon={<IconeDeVoltar />}>
+              Voltar
+            </Button>
             <Button
               variant="outline"
               disabled={exportando || total === 0}

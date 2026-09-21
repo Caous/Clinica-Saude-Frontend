@@ -136,6 +136,33 @@ describe("insightsRegistry", () => {
     });
   });
 
+  it("formata o telefone igual ao resto do sistema", () => {
+    const coluna = INSIGHTS.StatusNovoPaciente.colunas.find(
+      (atual) => atual.titulo === "Telefone"
+    );
+
+    const item = {
+      referenciaId: "x",
+      clienteNome: "Ana",
+      telefone: "11999998888",
+      metricas: {},
+    };
+
+    // Mesmo formato do grid de pacientes: o numero nao pode sair cru em uma tela e
+    // mascarado em outra.
+    expect(coluna?.valor(item as never)).toBe("(11) 99999-8888");
+  });
+
+  it("telefone ausente vira travessão, não string vazia", () => {
+    const coluna = INSIGHTS.StatusNovoPaciente.colunas.find(
+      (atual) => atual.titulo === "Telefone"
+    );
+
+    const item = { referenciaId: "x", clienteNome: "Ana", metricas: {} };
+
+    expect(coluna?.valor(item as never)).toBe("—");
+  });
+
   it("obterInsight devolve undefined para chave desconhecida ou ausente", () => {
     expect(obterInsight("PlanoInventado")).toBeUndefined();
     expect(obterInsight(undefined)).toBeUndefined();
