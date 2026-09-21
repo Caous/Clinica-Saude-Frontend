@@ -14,6 +14,22 @@ vi.mock("../../services/service/InsightsService", () => ({
   },
 }));
 
+/** 12 chaves = exatamente dois blocos de 6, o suficiente para observar o carregamento parcial. */
+const CHAVES_DE_DOIS_BLOCOS: InsightChave[] = [
+  "PlanoAcabando",
+  "PacienteDormente",
+  "FaltouOntem",
+  "SessaoAmanhaNaoConfirmada",
+  "AniversariantesHoje",
+  "PlanoZeradoSemRenovar",
+  "StatusNovoPaciente",
+  "StatusAlta",
+  "EmailVazio",
+  "TelefoneVazio",
+  "CpfDuplicado",
+  "PatologiaVazia",
+];
+
 function darContador(chave: string, total: number, severidade = InsightSeveridade.Atencao) {
   return { chave, total, severidade, atualizadoEm: new Date().toISOString() };
 }
@@ -109,18 +125,49 @@ describe("InsightStrip", () => {
     ).toBeInTheDocument();
   });
 
-  /**
-   * O lote é atômico, então a falha é de todos ou de nenhum.
-   *
-   * É a contrapartida aceita ao trocar uma chamada por card por uma chamada só: exibir metade
-   * dos números sem sinalizar que a outra metade falhou seria pior do que não exibir nenhum.
-   */
-  it("marca todos os cards como indisponíveis quando o lote falha", async () => {
+  it("marca como indisponíveis os cards do bloco que falhou", async () => {
     contadores.mockRejectedValue(new Error("falhou"));
 
     renderizar(["PlanoAcabando", "AniversariantesHoje"]);
 
     expect(await screen.findAllByText(/não foi possível carregar/i)).toHaveLength(2);
+  });
+
+  /**
+   * A falha fica contida no bloco que falhou.
+   *
+   * Com um lote unico isso nao era possivel: um erro apagava os 33 numeros de uma vez. Os
+   * blocos devolvem essa resiliencia sem voltar a uma requisicao por card.
+   */
+  it("um bloco com falha não apaga os números dos outros", async () => {
+    contadores.mockImplementation((chaves: InsightChave[]) =>
+      chaves.includes("PlanoAcabando")
+        ? Promise.reject(new Error("falhou"))
+        : Promise.resolve(chaves.map((chave) => darContador(chave, 7)))
+    );
+
+    renderizar(CHAVES_DE_DOIS_BLOCOS);
+
+    expect(await screen.findAllByText("7")).toHaveLength(6);
+    expect(await screen.findAllByText(/não foi possível carregar/i)).toHaveLength(6);
+  });
+
+  /**
+   * O ponto da mudanca: a tela nao espera o conjunto inteiro.
+   *
+   * O segundo bloco fica pendente para sempre neste teste. Os cards do primeiro precisam
+   * aparecer assim mesmo -- com lote unico, a faixa inteira ficaria em esqueleto.
+   */
+  it("pinta os cards do primeiro bloco sem esperar o segundo", async () => {
+    contadores.mockImplementation((chaves: InsightChave[]) =>
+      chaves.includes("PlanoAcabando")
+        ? Promise.resolve(chaves.map((chave) => darContador(chave, 4)))
+        : new Promise(() => {})
+    );
+
+    renderizar(CHAVES_DE_DOIS_BLOCOS);
+
+    expect(await screen.findAllByText("4")).toHaveLength(6);
   });
 
   it("não renderiza nada quando não há chave, para não deixar cabeçalho órfão", () => {
@@ -129,21 +176,26 @@ describe("InsightStrip", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  // UT-30 — o motivo de existir do endpoint em lote.
-  it("dispara uma requisição só, não uma por card", async () => {
+  // UT-30 — o motivo de existir do endpoint em lote: uma requisicao por bloco, nao por card.
+  it("agrupa as chaves em blocos em vez de uma requisição por card", async () => {
     responderLote(1);
 
-    renderizar([
-      "PlanoAcabando",
-      "PacienteDormente",
-      "AniversariantesHoje",
-      "EmailVazio",
-      "CpfDuplicado",
-      "StatusAlta",
-    ]);
+    renderizar(CHAVES_DE_DOIS_BLOCOS);
+
+    await waitFor(() => expect(contadores).toHaveBeenCalledTimes(2));
+
+    const chavesPedidas = contadores.mock.calls.flatMap((chamada) => chamada[0]);
+    expect(chavesPedidas).toHaveLength(CHAVES_DE_DOIS_BLOCOS.length);
+    // Nenhuma chave pedida duas vezes: bloco repetido seria requisicao jogada fora.
+    expect(new Set(chavesPedidas).size).toBe(CHAVES_DE_DOIS_BLOCOS.length);
+  });
+
+  it("cabe numa requisição só quando a faixa é pequena", async () => {
+    responderLote(1);
+
+    renderizar(["PlanoAcabando", "PacienteDormente", "AniversariantesHoje"]);
 
     await waitFor(() => expect(contadores).toHaveBeenCalledTimes(1));
-    expect(contadores.mock.calls[0][0]).toHaveLength(6);
   });
 
   // UT-31 — card zerado continua sendo porta de entrada para a lista.

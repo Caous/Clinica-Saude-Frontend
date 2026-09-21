@@ -59,12 +59,13 @@ function CardDoInsight({ chave, filtro, contador, carregando, erro }: CardDoInsi
 /**
  * Faixa de insights.
  *
- * Todos os contadores vêm de uma requisição só. A tela de Pacientes exibe 33 cards e uma
- * chamada por card esgotava a partição de rate limit do endpoint (30 req/30s) no primeiro
- * recarregamento — o usuário via a faixa inteira em erro depois de um F5.
+ * Os contadores chegam em blocos, e cada bloco pinta os seus cards assim que responde: a
+ * faixa não espera o conjunto inteiro para sair do esqueleto. É o meio-termo entre uma
+ * chamada por card — que esgotava a partição de rate limit do endpoint (30 req/30s) logo no
+ * primeiro F5 — e uma chamada única, que prendia as 33 contagens no tempo da mais lenta.
  */
 export default function InsightStrip({ chaves, filtro, titulo = "Insights" }: InsightStripProps) {
-  const { data: contadores, isLoading, isError } = useInsightContadores(chaves, filtro);
+  const { contadores, estados } = useInsightContadores(chaves, filtro);
 
   if (chaves.length === 0) return null;
 
@@ -82,9 +83,9 @@ export default function InsightStrip({ chaves, filtro, titulo = "Insights" }: In
             key={chave}
             chave={chave}
             filtro={filtro}
-            contador={contadores?.get(chave)}
-            carregando={isLoading}
-            erro={isError}
+            contador={contadores.get(chave)}
+            carregando={estados.get(chave)?.carregando ?? true}
+            erro={estados.get(chave)?.erro ?? false}
           />
         ))}
       </div>
