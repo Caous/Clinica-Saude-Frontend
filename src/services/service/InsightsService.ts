@@ -42,6 +42,25 @@ class InsightsService {
     return data;
   }
 
+  /**
+   * Contadores de várias chaves numa chamada só.
+   *
+   * A faixa da tela de Pacientes exibe dezenas de cards. Um GET por card esgotava a partição
+   * de rate limit do controller (30 req/30s) já no primeiro recarregamento da tela.
+   */
+  async contadores(
+    chaves: InsightChave[],
+    filtro?: InsightFiltro
+  ): Promise<InsightContadorResponse[]> {
+    if (chaves.length === 0) return [];
+
+    const { data } = await instanceApi.get<InsightContadorResponse[]>(
+      `${BASE}/contadores${querystring(filtro, { chaves: chaves.join(",") })}`
+    );
+
+    return data ?? [];
+  }
+
   async itens(
     chave: InsightChave,
     filtro: InsightFiltro | undefined,

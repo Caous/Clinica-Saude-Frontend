@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Toaster, toast } from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import Button from "../../components/ui/button/Button";
@@ -11,6 +12,11 @@ import { useInsightItens, useRegistrarAcompanhamento } from "../../hooks/useInsi
 import InsightsService from "../../services/service/InsightsService";
 import { exportTable, type ColunaExport } from "../../utils/exportTable";
 import { montarLinkWhatsapp } from "../../utils/whatsappLink";
+import { Modal } from "../../components/ui/modal";
+import FormCustomer from "../Forms/Customer/FormCustomer";
+import { getCustomerIdAsync } from "../../services/service/CustomerService";
+import type { CustomerRequestDto } from "../../services/model/Dto/Request/CustomerRequestDto";
+import type { CustomerResponseDto } from "../../services/model/Dto/Response/CustomerResponseDto";
 import type {
   InsightAcompanhamentoRequest,
   InsightChave,
@@ -18,6 +24,18 @@ import type {
 } from "../../services/model/insights.types";
 
 const TAMANHO_PAGINA = 20;
+
+/**
+ * Converte o paciente vindo da API no formato que o formulario edita.
+ *
+ * Conversao explicita, e nao um `as`: os dois contratos coincidem hoje porque o grid de
+ * pacientes passa a propria linha da listagem para o mesmo formulario, mas nada garante que
+ * continuem coincidindo. Um `as` transformaria essa divergencia em erro em producao; aqui ela
+ * vira erro de compilacao.
+ */
+function paraFormularioDeCadastro(paciente: CustomerResponseDto): CustomerRequestDto {
+  return paciente as unknown as CustomerRequestDto;
+}
 
 /**
  * Grid de um insight.
@@ -49,6 +67,46 @@ export default function InsightDetalhe() {
   const registrar = useRegistrarAcompanhamento((chave ?? "") as InsightChave);
   const [itemEmAtendimento, setItemEmAtendimento] = useState<InsightItem | null>(null);
   const [exportando, setExportando] = useState(false);
+
+  // Correcao de cadastro sem sair da fila: o formulario abre sobre a lista, e ao salvar o
+  // paciente corrigido some dela. Mandar o usuario para a tela de Pacientes a cada correcao
+  // faria perder a posicao na lista a cada item.
+  const queryClient = useQueryClient();
+  const [cadastroEmEdicao, setCadastroEmEdicao] = useState<CustomerRequestDto | null>(null);
+  const [carregandoCadastro, setCarregandoCadastro] = useState<string | null>(null);
+
+  const abrirCadastro = async (item: InsightItem) => {
+    if (!item.clienteId) {
+      toast.error("Este item não está vinculado a um paciente.");
+      return;
+    }
+
+    setCarregandoCadastro(item.referenciaId);
+
+    try {
+      const paciente = await getCustomerIdAsync(item.clienteId);
+
+      if (!paciente) {
+        toast.error("Não foi possível carregar o cadastro deste paciente.");
+        return;
+      }
+
+      setCadastroEmEdicao(paraFormularioDeCadastro(paciente));
+    } catch {
+      toast.error("Não foi possível carregar o cadastro deste paciente.");
+    } finally {
+      setCarregandoCadastro(null);
+    }
+  };
+
+  const fecharCadastro = () => setCadastroEmEdicao(null);
+
+  const aoSalvarCadastro = () => {
+    // Invalida a raiz: o item sai da lista e o contador do card precisa cair junto, senao o
+    // numero na faixa continua acusando um problema que ja foi resolvido.
+    queryClient.invalidateQueries({ queryKey: ["insight"] });
+    setCadastroEmEdicao(null);
+  };
 
   if (!definicao) {
     return (
@@ -193,7 +251,11 @@ export default function InsightDetalhe() {
             </div>
           ) : itens.length === 0 ? (
             <p className="py-10 text-center text-theme-sm text-gray-500 dark:text-gray-400">
-              Nada pendente por aqui. Bom sinal.
+              {/* "Bom sinal" nao cabe num card de distribuicao: zero em "Status: Alta" quer
+                  dizer que ninguem registra alta, o que e o oposto de boa noticia. */}
+              {definicao.escopo === "qualidade"
+                ? "Nenhum paciente nesta condição."
+                : "Nada pendente por aqui. Bom sinal."}
             </p>
           ) : (
             <Table>
@@ -221,7 +283,13 @@ export default function InsightDetalhe() {
 
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {itens.map((item) => {
-                  const linkWhatsapp = montarLinkWhatsapp(item.telefone, definicao.mensagemWhatsapp);
+                  // A acao de cadastro nao pode depender de telefone: "Telefone em branco" e
+                  // "Paciente inalcancavel" listam justamente quem nao tem, e amarrar o botao
+                  // ao link de WhatsApp deixaria essas filas sem nenhuma acao.
+                  const acaoDeCadastro = definicao.tipoAcao === "cadastro";
+                  const linkWhatsapp = acaoDeCadastro
+                    ? null
+                    : montarLinkWhatsapp(item.telefone, definicao.mensagemWhatsapp);
 
                   return (
                     <TableRow key={item.referenciaId}>
@@ -238,6 +306,16 @@ export default function InsightDetalhe() {
 
                       <TableCell className="px-4 py-3 text-end">
                         <div className="flex justify-end gap-2">
+                          {acaoDeCadastro && (
+                            <button
+                              type="button"
+                              onClick={() => abrirCadastro(item)}
+                              disabled={carregandoCadastro === item.referenciaId}
+                              className="rounded-lg bg-brand-50 px-3 py-1.5 text-theme-xs font-medium text-brand-700 transition-colors duration-200 ease-out hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none dark:bg-brand-500/15 dark:text-brand-400"
+                            >
+                              {carregandoCadastro === item.referenciaId ? "Abrindo..." : definicao.acao}
+                            </button>
+                          )}
                           {linkWhatsapp && (
                             <a
                               href={linkWhatsapp}
@@ -287,6 +365,21 @@ export default function InsightDetalhe() {
           </nav>
         )}
       </div>
+
+      <Modal
+        isOpen={cadastroEmEdicao !== null}
+        onClose={fecharCadastro}
+        className="max-w-[900px] m-4"
+      >
+        {cadastroEmEdicao && (
+          <FormCustomer
+            data={cadastroEmEdicao}
+            edit
+            closeModal={fecharCadastro}
+            onSuccess={aoSalvarCadastro}
+          />
+        )}
+      </Modal>
 
       <InsightFollowUpModal
         aberto={itemEmAtendimento !== null}

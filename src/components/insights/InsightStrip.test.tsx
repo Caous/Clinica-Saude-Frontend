@@ -4,15 +4,26 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import InsightStrip from "./InsightStrip";
-import { InsightSeveridade } from "../../services/model/insights.types";
+import { InsightSeveridade, type InsightChave } from "../../services/model/insights.types";
 
-const contador = vi.fn();
+const contadores = vi.fn();
 
 vi.mock("../../services/service/InsightsService", () => ({
   default: {
-    contador: (...args: unknown[]) => contador(...args),
+    contadores: (...args: unknown[]) => contadores(...args),
   },
 }));
+
+function darContador(chave: string, total: number, severidade = InsightSeveridade.Atencao) {
+  return { chave, total, severidade, atualizadoEm: new Date().toISOString() };
+}
+
+/** Responde o lote devolvendo o mesmo total para toda chave pedida. */
+function responderLote(total: number, severidade = InsightSeveridade.Atencao) {
+  contadores.mockImplementation((chaves: InsightChave[]) =>
+    Promise.resolve(chaves.map((chave) => darContador(chave, total, severidade)))
+  );
+}
 
 function renderizar(chaves: Parameters<typeof InsightStrip>[0]["chaves"]) {
   const queryClient = new QueryClient({
@@ -33,16 +44,11 @@ function renderizar(chaves: Parameters<typeof InsightStrip>[0]["chaves"]) {
 
 describe("InsightStrip", () => {
   beforeEach(() => {
-    contador.mockReset();
+    contadores.mockReset();
   });
 
   it("mostra o total devolvido pela API", async () => {
-    contador.mockResolvedValue({
-      chave: "PlanoAcabando",
-      total: 12,
-      severidade: InsightSeveridade.Atencao,
-      atualizadoEm: new Date().toISOString(),
-    });
+    responderLote(12);
 
     renderizar(["PlanoAcabando"]);
 
@@ -53,12 +59,7 @@ describe("InsightStrip", () => {
   // AC-12
   it("navega para o grid do insight ao clicar no card", async () => {
     const user = userEvent.setup();
-    contador.mockResolvedValue({
-      chave: "PlanoAcabando",
-      total: 3,
-      severidade: InsightSeveridade.Atencao,
-      atualizadoEm: new Date().toISOString(),
-    });
+    responderLote(3);
 
     renderizar(["PlanoAcabando"]);
     await screen.findByText("3");
@@ -71,12 +72,7 @@ describe("InsightStrip", () => {
   // AC-12 — acessibilidade: o card é <button>, então Enter tem que acionar.
   it("aciona por teclado, não só por clique de mouse", async () => {
     const user = userEvent.setup();
-    contador.mockResolvedValue({
-      chave: "PlanoAcabando",
-      total: 3,
-      severidade: InsightSeveridade.Atencao,
-      atualizadoEm: new Date().toISOString(),
-    });
+    responderLote(3);
 
     renderizar(["PlanoAcabando"]);
     await screen.findByText("3");
@@ -89,12 +85,7 @@ describe("InsightStrip", () => {
   });
 
   it("descreve a regra no rótulo acessível, para o time saber por que o paciente está na fila", async () => {
-    contador.mockResolvedValue({
-      chave: "PacienteDormente",
-      total: 5,
-      severidade: InsightSeveridade.Atencao,
-      atualizadoEm: new Date().toISOString(),
-    });
+    responderLote(5);
 
     renderizar(["PacienteDormente"]);
 
@@ -105,7 +96,7 @@ describe("InsightStrip", () => {
 
   // AC-15
   it("renderiza estado de erro sem quebrar a tela quando a API falha", async () => {
-    contador.mockRejectedValue({ response: { status: 429 } });
+    contadores.mockRejectedValue({ response: { status: 429 } });
 
     renderizar(["PlanoAcabando"]);
 
@@ -118,22 +109,18 @@ describe("InsightStrip", () => {
     ).toBeInTheDocument();
   });
 
-  it("um contador com falha não impede o outro de exibir o número", async () => {
-    contador.mockImplementation((chave: string) =>
-      chave === "PlanoAcabando"
-        ? Promise.reject(new Error("falhou"))
-        : Promise.resolve({
-            chave,
-            total: 7,
-            severidade: InsightSeveridade.Informativo,
-            atualizadoEm: new Date().toISOString(),
-          })
-    );
+  /**
+   * O lote é atômico, então a falha é de todos ou de nenhum.
+   *
+   * É a contrapartida aceita ao trocar uma chamada por card por uma chamada só: exibir metade
+   * dos números sem sinalizar que a outra metade falhou seria pior do que não exibir nenhum.
+   */
+  it("marca todos os cards como indisponíveis quando o lote falha", async () => {
+    contadores.mockRejectedValue(new Error("falhou"));
 
     renderizar(["PlanoAcabando", "AniversariantesHoje"]);
 
-    expect(await screen.findByText("7")).toBeInTheDocument();
-    expect(await screen.findByText(/não foi possível carregar/i)).toBeInTheDocument();
+    expect(await screen.findAllByText(/não foi possível carregar/i)).toHaveLength(2);
   });
 
   it("não renderiza nada quando não há chave, para não deixar cabeçalho órfão", () => {
@@ -142,16 +129,33 @@ describe("InsightStrip", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("dispara uma chamada por card, não uma por render", async () => {
-    contador.mockResolvedValue({
-      chave: "PlanoAcabando",
-      total: 1,
-      severidade: InsightSeveridade.Informativo,
-      atualizadoEm: new Date().toISOString(),
-    });
+  // UT-30 — o motivo de existir do endpoint em lote.
+  it("dispara uma requisição só, não uma por card", async () => {
+    responderLote(1);
 
-    renderizar(["PlanoAcabando", "PacienteDormente", "AniversariantesHoje"]);
+    renderizar([
+      "PlanoAcabando",
+      "PacienteDormente",
+      "AniversariantesHoje",
+      "EmailVazio",
+      "CpfDuplicado",
+      "StatusAlta",
+    ]);
 
-    await waitFor(() => expect(contador).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(contadores).toHaveBeenCalledTimes(1));
+    expect(contadores.mock.calls[0][0]).toHaveLength(6);
+  });
+
+  // UT-31 — card zerado continua sendo porta de entrada para a lista.
+  it("mantém o card clicável quando o contador é zero", async () => {
+    const user = userEvent.setup();
+    responderLote(0, InsightSeveridade.Informativo);
+
+    renderizar(["StatusAlta"]);
+
+    await screen.findByText("0");
+    await user.click(screen.getByRole("button", { name: /Status: Alta/i }));
+
+    expect(await screen.findByText("destino do insight")).toBeInTheDocument();
   });
 });
