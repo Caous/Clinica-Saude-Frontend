@@ -21,7 +21,39 @@ const CHAVES_DO_BACKEND: InsightChave[] = [
   "SessaoAmanhaNaoConfirmada",
   "ParcelasVence7Dias",
   "PlanoSemPagamento",
+  "StatusNovoPaciente",
+  "StatusAguardandoAvaliacao",
+  "StatusEmAvaliacao",
+  "StatusPlanoTratamento",
+  "StatusEmAtendimento",
+  "StatusFaltouAtendimento",
+  "StatusTratamentoConcluido",
+  "StatusAlta",
+  "StatusCancelado",
+  "StatusInativo",
+  "EmailVazio",
+  "EmailInvalido",
+  "EmailPlaceholder",
+  "EmailDuplicado",
+  "TelefoneVazio",
+  "TelefoneDuplicado",
+  "TelefoneDigitosIguais",
+  "TelefoneCurto",
+  "SemEmailESemTelefone",
+  "CpfDigitosRepetidos",
+  "CpfVazio",
+  "CpfDigitoVerificadorInvalido",
+  "CpfDuplicado",
+  "EnderecoVazio",
+  "PatologiaVazia",
+  "DocumentoIdentificacaoVazio",
+  "FilialNaoDefinida",
 ];
+
+/** Insights de qualidade de cadastro: os que abrem a ficha em vez do WhatsApp. */
+const CHAVES_DE_QUALIDADE: InsightChave[] = CHAVES_DO_BACKEND.filter(
+  (chave) => INSIGHTS[chave]?.escopo === "qualidade"
+);
 
 describe("insightsRegistry", () => {
   it("tem definição para toda chave que o backend expõe", () => {
@@ -45,19 +77,48 @@ describe("insightsRegistry", () => {
       expect(definicao.descricao.length).toBeGreaterThan(40);
       expect(definicao.titulo).not.toBe("");
       expect(definicao.acao).not.toBe("");
-      expect(definicao.mensagemWhatsapp).not.toBe("");
       expect(definicao.colunas.length).toBeGreaterThanOrEqual(2);
       expect(definicao.colunas[0].titulo).toBe("Paciente");
     });
   });
 
   it("as faixas só referenciam insights do próprio escopo", () => {
+    // A faixa de Pacientes carrega venda e qualidade de cadastro: as duas falam do paciente,
+    // e foi decisão do negócio manter tudo numa faixa só.
     INSIGHTS_DA_TELA_CLIENTE.forEach((chave) =>
-      expect(INSIGHTS[chave].escopo).toBe("cliente")
+      expect(["cliente", "qualidade"]).toContain(INSIGHTS[chave].escopo)
     );
     INSIGHTS_DA_TELA_FINANCEIRO.forEach((chave) =>
       expect(INSIGHTS[chave].escopo).toBe("financeiro")
     );
+  });
+
+  // UT-26
+  it("insight de qualidade abre o cadastro e não oferece WhatsApp", () => {
+    expect(CHAVES_DE_QUALIDADE.length).toBe(27);
+
+    CHAVES_DE_QUALIDADE.forEach((chave) => {
+      const definicao = INSIGHTS[chave];
+
+      expect(definicao.tipoAcao).toBe("cadastro");
+      // Metade dessas filas é de gente sem telefone: oferecer WhatsApp aqui não faz sentido.
+      expect(definicao.mensagemWhatsapp).toBeUndefined();
+      expect(definicao.acao).toBe("Abrir cadastro");
+    });
+  });
+
+  it("insight de venda continua abrindo o WhatsApp, com mensagem pronta", () => {
+    Object.values(INSIGHTS)
+      .filter((definicao) => definicao.escopo !== "qualidade")
+      .forEach((definicao) => {
+        expect(definicao.tipoAcao ?? "whatsapp").toBe("whatsapp");
+        expect(definicao.mensagemWhatsapp).toBeTruthy();
+      });
+  });
+
+  it("a faixa de Pacientes traz os 6 insights de venda e os 27 de qualidade", () => {
+    expect(INSIGHTS_DA_TELA_CLIENTE).toHaveLength(33);
+    expect(new Set(INSIGHTS_DA_TELA_CLIENTE).size).toBe(33);
   });
 
   it("nenhum insight aparece nas duas faixas ao mesmo tempo", () => {

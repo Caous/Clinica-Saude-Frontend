@@ -11,7 +11,38 @@ export type InsightChave =
   | "FaltouOntem"
   | "SessaoAmanhaNaoConfirmada"
   | "ParcelasVence7Dias"
-  | "PlanoSemPagamento";
+  | "PlanoSemPagamento"
+  // Qualidade de cadastro — distribuição por status do paciente.
+  | "StatusNovoPaciente"
+  | "StatusAguardandoAvaliacao"
+  | "StatusEmAvaliacao"
+  | "StatusPlanoTratamento"
+  | "StatusEmAtendimento"
+  | "StatusFaltouAtendimento"
+  | "StatusTratamentoConcluido"
+  | "StatusAlta"
+  | "StatusCancelado"
+  | "StatusInativo"
+  // Qualidade de cadastro — contato.
+  | "EmailVazio"
+  | "EmailInvalido"
+  | "EmailPlaceholder"
+  | "EmailDuplicado"
+  | "TelefoneVazio"
+  | "TelefoneDuplicado"
+  | "TelefoneDigitosIguais"
+  | "TelefoneCurto"
+  | "SemEmailESemTelefone"
+  // Qualidade de cadastro — CPF.
+  | "CpfDigitosRepetidos"
+  | "CpfVazio"
+  | "CpfDigitoVerificadorInvalido"
+  | "CpfDuplicado"
+  // Qualidade de cadastro — campos não preenchidos.
+  | "EnderecoVazio"
+  | "PatologiaVazia"
+  | "DocumentoIdentificacaoVazio"
+  | "FilialNaoDefinida";
 
 /** Urgência do insight — define a cor do card. */
 export enum InsightSeveridade {
