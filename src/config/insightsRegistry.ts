@@ -270,7 +270,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Parabenizar",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Parabéns! 🎉 A equipe do Instituto Barros deseja um feliz aniversário para você!",
+      "Parabéns {nome_cliente}! A equipe do Instituto Barros deseja um feliz aniversário para você, que você viva esse próximo ano de muitas alegrias e sem dor. 🙏🏻\n\nConte sempre conosco.",
     colunas: [
       colunaPaciente,
       { titulo: "Idade", valor: metrica("Idade"), numerica: true },
