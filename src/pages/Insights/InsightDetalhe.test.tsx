@@ -19,6 +19,27 @@ vi.mock("../../services/service/InsightsService", () => ({
   },
 }));
 
+const getEmployeeById = vi.fn();
+
+vi.mock("../../services/service/EmployeeService", () => ({
+  EmployeeService: {
+    getById: (...args: unknown[]) => getEmployeeById(...args),
+  },
+}));
+
+// O formulário real dispara consultas próprias (filiais, máscaras); aqui só interessa
+// provar qual formulário o modal escolheu e que o sucesso invalida os contadores.
+vi.mock("../Forms/Employee/FormEmployee", () => ({
+  default: ({ data, onSuccess }: { data?: { nome?: string }; onSuccess?: () => void }) => (
+    <div>
+      <p>ficha de {data?.nome}</p>
+      <button type="button" onClick={onSuccess}>
+        salvar ficha
+      </button>
+    </div>
+  ),
+}));
+
 const exportTableMock = vi.fn(() => "arquivo.csv");
 vi.mock("../../utils/exportTable", () => ({
   exportTable: (...args: unknown[]) => exportTableMock(...(args as [])),
@@ -40,15 +61,16 @@ function EspiaoDeUrl() {
   return <output data-testid="url">{location.pathname + location.search}</output>;
 }
 
-function renderizar(rotaInicial: string) {
+function renderizar(rotaInicial: string, rotasAnteriores: string[] = []) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const entradas = [...rotasAnteriores, rotaInicial];
 
   // PageMeta usa react-helmet-async; sem o provider o componente estoura na montagem,
   // igual ao AppWrapper que envolve a aplicacao real.
   return render(
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[rotaInicial]}>
+        <MemoryRouter initialEntries={entradas} initialIndex={entradas.length - 1}>
           <EspiaoDeUrl />
           <Routes>
             <Route path="/insights/:chave" element={<InsightDetalhe />} />
@@ -62,9 +84,117 @@ function renderizar(rotaInicial: string) {
 describe("InsightDetalhe", () => {
   beforeEach(() => {
     itens.mockReset();
+    getEmployeeById.mockReset();
     exportacao.mockReset();
     registrarAcompanhamento.mockReset();
     exportTableMock.mockClear();
+  });
+
+  // ───────────── voltar ─────────────
+
+  it("volta para a tela anterior quando existe histórico", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "AniversariantesHoje",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 2)],
+    });
+
+    renderizar("/insights/AniversariantesHoje", ["/customer"]);
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /voltar/i }));
+
+    expect(screen.getByTestId("url")).toHaveTextContent("/customer");
+  });
+
+  /**
+   * Quem abre o insight por link direto ou recarrega a pagina nao tem tela anterior.
+   * Sem o fallback o botao ficaria ali sem fazer nada.
+   */
+  it("cai na tela de Pacientes quando o insight foi aberto direto pela URL", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "StatusNovoPaciente",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 2)],
+    });
+
+    renderizar("/insights/StatusNovoPaciente");
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /voltar/i }));
+
+    expect(screen.getByTestId("url")).toHaveTextContent("/customer");
+  });
+
+  it("insight de cobrança volta para Despesas, não para Pacientes", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "ParcelasVencidas",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 2)],
+    });
+
+    renderizar("/insights/ParcelasVencidas");
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /voltar/i }));
+
+    expect(screen.getByTestId("url")).toHaveTextContent("/financeiro/despesas");
+  });
+
+  // UT-22
+  it("abre a ficha do funcionário em modal e invalida os contadores ao salvar", async () => {
+    const user = userEvent.setup();
+    itens.mockResolvedValue({
+      chave: "FuncionarioCargoVazio",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 0)],
+    });
+    getEmployeeById.mockResolvedValue({ id: "cli-Ana", nome: "Ana" });
+
+    renderizar("/insights/FuncionarioCargoVazio");
+    await screen.findByText("Ana");
+
+    await user.click(screen.getByRole("button", { name: /abrir ficha/i }));
+
+    expect(await screen.findByText("ficha de Ana")).toBeInTheDocument();
+    expect(getEmployeeById).toHaveBeenCalledWith("cli-Ana");
+
+    await user.click(screen.getByRole("button", { name: /salvar ficha/i }));
+
+    expect(screen.queryByText("ficha de Ana")).not.toBeInTheDocument();
+  });
+
+  it("insight de funcionário não oferece WhatsApp", async () => {
+    itens.mockResolvedValue({
+      chave: "FuncionarioTelefoneVazio",
+      total: 1,
+      pagina: 1,
+      tamanhoPagina: 20,
+      itens: [paciente("Ana", 0)],
+    });
+
+    renderizar("/insights/FuncionarioTelefoneVazio");
+    await screen.findByText("Ana");
+
+    // A fila existe justamente porque falta telefone: oferecer WhatsApp aqui seria piada.
+    // O breadcrumb tem links próprios, então a asserção olha o destino, não o papel.
+    const paraWhatsapp = screen
+      .queryAllByRole("link")
+      .filter((link) => (link.getAttribute("href") ?? "").includes("wa.me"));
+
+    expect(paraWhatsapp).toHaveLength(0);
+    expect(screen.getByRole("button", { name: /abrir ficha/i })).toBeInTheDocument();
   });
 
   it("lista os pacientes do insight com as métricas vindas da API", async () => {

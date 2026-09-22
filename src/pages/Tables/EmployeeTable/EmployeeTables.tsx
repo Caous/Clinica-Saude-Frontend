@@ -7,6 +7,8 @@ import SearchInput from "../../../components/common/SearchInput";
 import EmployeeGrid from "../../../components/tables/EmployeeGrid/EmployeeGrid";
 import FromEmployee from "../../Forms/Employee/FormEmployee";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import InsightStrip from "../../../components/insights/InsightStrip";
+import { INSIGHTS_DA_TELA_FUNCIONARIO } from "../../../config/insightsRegistry";
 
 
 export default function EmployeeTables() {
@@ -23,6 +25,13 @@ export default function EmployeeTables() {
             />
 
             <PageBreadcrumb pageTitle="Funcionários Instituto Barros" />
+
+            {/*
+              A faixa e o grid são irmãos e cada um tem a sua própria consulta: nenhum dos dois
+              espera o outro para aparecer. A faixa ainda carrega os contadores em blocos, então
+              os cards pintam conforme chegam.
+            */}
+            <InsightStrip chaves={INSIGHTS_DA_TELA_FUNCIONARIO} titulo="Cadastro da equipe" />
 
             <div className="flex justify-between gap-6 mb-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">

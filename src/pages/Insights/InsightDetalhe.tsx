@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { Toaster, toast } from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import PageMeta from "../../components/common/PageMeta";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import Button from "../../components/ui/button/Button";
@@ -11,6 +12,14 @@ import { useInsightItens, useRegistrarAcompanhamento } from "../../hooks/useInsi
 import InsightsService from "../../services/service/InsightsService";
 import { exportTable, type ColunaExport } from "../../utils/exportTable";
 import { montarLinkWhatsapp } from "../../utils/whatsappLink";
+import { Modal } from "../../components/ui/modal";
+import FormCustomer from "../Forms/Customer/FormCustomer";
+import { getCustomerIdAsync } from "../../services/service/CustomerService";
+import FormEmployee from "../Forms/Employee/FormEmployee";
+import { EmployeeService } from "../../services/service/EmployeeService";
+import type { EmployeeResponseDto } from "../../services/model/Dto/Response/EmployeeResponseDto";
+import type { CustomerRequestDto } from "../../services/model/Dto/Request/CustomerRequestDto";
+import type { CustomerResponseDto } from "../../services/model/Dto/Response/CustomerResponseDto";
 import type {
   InsightAcompanhamentoRequest,
   InsightChave,
@@ -18,6 +27,37 @@ import type {
 } from "../../services/model/insights.types";
 
 const TAMANHO_PAGINA = 20;
+
+/** Seta para a esquerda. `aria-hidden` porque o proprio texto do botao ja diz "Voltar". */
+function IconeDeVoltar() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </svg>
+  );
+}
+
+/**
+ * Converte o paciente vindo da API no formato que o formulario edita.
+ *
+ * Conversao explicita, e nao um `as`: os dois contratos coincidem hoje porque o grid de
+ * pacientes passa a propria linha da listagem para o mesmo formulario, mas nada garante que
+ * continuem coincidindo. Um `as` transformaria essa divergencia em erro em producao; aqui ela
+ * vira erro de compilacao.
+ */
+function paraFormularioDeCadastro(paciente: CustomerResponseDto): CustomerRequestDto {
+  return paciente as unknown as CustomerRequestDto;
+}
 
 /**
  * Grid de um insight.
@@ -30,6 +70,7 @@ export default function InsightDetalhe() {
   const { chave } = useParams<{ chave: string }>();
   const navigate = useNavigate();
   const [parametros, setParametros] = useSearchParams();
+  const location = useLocation();
 
   const definicao = obterInsight(chave);
 
@@ -49,6 +90,103 @@ export default function InsightDetalhe() {
   const registrar = useRegistrarAcompanhamento((chave ?? "") as InsightChave);
   const [itemEmAtendimento, setItemEmAtendimento] = useState<InsightItem | null>(null);
   const [exportando, setExportando] = useState(false);
+
+  // Correcao de cadastro sem sair da fila: o formulario abre sobre a lista, e ao salvar o
+  // paciente corrigido some dela. Mandar o usuario para a tela de Pacientes a cada correcao
+  // faria perder a posicao na lista a cada item.
+  const queryClient = useQueryClient();
+  const [cadastroEmEdicao, setCadastroEmEdicao] = useState<CustomerRequestDto | null>(null);
+  const [carregandoCadastro, setCarregandoCadastro] = useState<string | null>(null);
+
+  const [fichaEmEdicao, setFichaEmEdicao] = useState<EmployeeResponseDto | null>(null);
+
+  const abrirFichaDeFuncionario = async (item: InsightItem) => {
+    if (!item.clienteId) {
+      toast.error("Este item não está vinculado a um funcionário.");
+      return;
+    }
+
+    setCarregandoCadastro(item.referenciaId);
+
+    try {
+      const funcionario = await EmployeeService.getById(item.clienteId);
+
+      if (!funcionario) {
+        toast.error("Não foi possível carregar a ficha deste funcionário.");
+        return;
+      }
+
+      setFichaEmEdicao(funcionario);
+    } catch {
+      toast.error("Não foi possível carregar a ficha deste funcionário.");
+    } finally {
+      setCarregandoCadastro(null);
+    }
+  };
+
+  const fecharFicha = () => setFichaEmEdicao(null);
+
+  const aoSalvarFicha = () => {
+    queryClient.invalidateQueries({ queryKey: ["insight"] });
+    setFichaEmEdicao(null);
+  };
+
+  const abrirCadastro = async (item: InsightItem) => {
+    if (!item.clienteId) {
+      toast.error("Este item não está vinculado a um paciente.");
+      return;
+    }
+
+    setCarregandoCadastro(item.referenciaId);
+
+    try {
+      const paciente = await getCustomerIdAsync(item.clienteId);
+
+      if (!paciente) {
+        toast.error("Não foi possível carregar o cadastro deste paciente.");
+        return;
+      }
+
+      setCadastroEmEdicao(paraFormularioDeCadastro(paciente));
+    } catch {
+      toast.error("Não foi possível carregar o cadastro deste paciente.");
+    } finally {
+      setCarregandoCadastro(null);
+    }
+  };
+
+  const fecharCadastro = () => setCadastroEmEdicao(null);
+
+  const aoSalvarCadastro = () => {
+    // Invalida a raiz: o item sai da lista e o contador do card precisa cair junto, senao o
+    // numero na faixa continua acusando um problema que ja foi resolvido.
+    queryClient.invalidateQueries({ queryKey: ["insight"] });
+    setCadastroEmEdicao(null);
+  };
+
+  /**
+   * Para onde o botao de voltar leva quando nao ha historico.
+   *
+   * O insight e sempre aberto a partir da faixa de alguma tela, e e para ela que "voltar"
+   * precisa levar. Insight de venda e de qualidade de cadastro moram na tela de Pacientes;
+   * os de cobranca, na de Despesas.
+   */
+  const telaDeOrigem = definicao?.escopo === "financeiro" ? "/financeiro/despesas" : "/customer";
+
+  /**
+   * Volta uma pagina no historico quando existe, e cai na tela de origem quando nao existe.
+   *
+   * Sem o fallback, quem abre o insight por link direto ou recarrega a pagina ficaria com um
+   * botao que nao faz nada. Com ele, `navigate(-1)` ainda e preferido porque preserva o estado
+   * da tela anterior -- filtro do grid, posicao de rolagem, faixa expandida.
+   */
+  const voltar = () => {
+    // `key` e "default" apenas na primeira entrada da pilha: e como o react-router diz que
+    // nao existe tela anterior dentro da aplicacao. Checar `window.history.length` acusaria
+    // qualquer pagina visitada antes no navegador, inclusive de outro site.
+    if (location.key !== "default") navigate(-1);
+    else navigate(telaDeOrigem);
+  };
 
   if (!definicao) {
     return (
@@ -141,7 +279,10 @@ export default function InsightDetalhe() {
             </p>
           </div>
 
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button variant="outline" onClick={voltar} startIcon={<IconeDeVoltar />}>
+              Voltar
+            </Button>
             <Button
               variant="outline"
               disabled={exportando || total === 0}
@@ -193,7 +334,13 @@ export default function InsightDetalhe() {
             </div>
           ) : itens.length === 0 ? (
             <p className="py-10 text-center text-theme-sm text-gray-500 dark:text-gray-400">
-              Nada pendente por aqui. Bom sinal.
+              {/* "Bom sinal" nao cabe num card de distribuicao: zero em "Status: Alta" quer
+                  dizer que ninguem registra alta, o que e o oposto de boa noticia. */}
+              {definicao.escopo === "qualidade"
+                ? "Nenhum paciente nesta condição."
+                : definicao.escopo === "funcionario"
+                  ? "Nenhum funcionário nesta condição."
+                  : "Nada pendente por aqui. Bom sinal."}
             </p>
           ) : (
             <Table>
@@ -221,7 +368,16 @@ export default function InsightDetalhe() {
 
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {itens.map((item) => {
-                  const linkWhatsapp = montarLinkWhatsapp(item.telefone, definicao.mensagemWhatsapp);
+                  // A acao de cadastro nao pode depender de telefone: "Telefone em branco" e
+                  // "Paciente inalcancavel" listam justamente quem nao tem, e amarrar o botao
+                  // ao link de WhatsApp deixaria essas filas sem nenhuma acao.
+                  // O formulário do modal sai do tipo da definição: ficha de paciente ou de
+                  // funcionário. Antes o componente estava preso ao de paciente.
+                  const acaoDeFicha = definicao.tipoAcao === "fichaDeFuncionario";
+                  const acaoDeCadastro = definicao.tipoAcao === "cadastro" || acaoDeFicha;
+                  const linkWhatsapp = acaoDeCadastro
+                    ? null
+                    : montarLinkWhatsapp(item.telefone, definicao.mensagemWhatsapp);
 
                   return (
                     <TableRow key={item.referenciaId}>
@@ -238,6 +394,16 @@ export default function InsightDetalhe() {
 
                       <TableCell className="px-4 py-3 text-end">
                         <div className="flex justify-end gap-2">
+                          {acaoDeCadastro && (
+                            <button
+                              type="button"
+                              onClick={() => (acaoDeFicha ? abrirFichaDeFuncionario(item) : abrirCadastro(item))}
+                              disabled={carregandoCadastro === item.referenciaId}
+                              className="rounded-lg bg-brand-50 px-3 py-1.5 text-theme-xs font-medium text-brand-700 transition-colors duration-200 ease-out hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transition-none dark:bg-brand-500/15 dark:text-brand-400"
+                            >
+                              {carregandoCadastro === item.referenciaId ? "Abrindo..." : definicao.acao}
+                            </button>
+                          )}
                           {linkWhatsapp && (
                             <a
                               href={linkWhatsapp}
@@ -287,6 +453,36 @@ export default function InsightDetalhe() {
           </nav>
         )}
       </div>
+
+      <Modal
+        isOpen={cadastroEmEdicao !== null}
+        onClose={fecharCadastro}
+        className="max-w-[900px] m-4"
+      >
+        {cadastroEmEdicao && (
+          <FormCustomer
+            data={cadastroEmEdicao}
+            edit
+            closeModal={fecharCadastro}
+            onSuccess={aoSalvarCadastro}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={fichaEmEdicao !== null}
+        onClose={fecharFicha}
+        className="max-w-[700px] m-4"
+      >
+        {fichaEmEdicao && (
+          <FormEmployee
+            data={fichaEmEdicao}
+            edit
+            closeModal={fecharFicha}
+            onSuccess={aoSalvarFicha}
+          />
+        )}
+      </Modal>
 
       <InsightFollowUpModal
         aberto={itemEmAtendimento !== null}

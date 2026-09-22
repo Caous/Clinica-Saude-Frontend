@@ -8,6 +8,7 @@ import {
 } from "../../ui/table";
 import Badge from "../../ui/badge/Badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ordenarPorNomeComDesativadosNoFim } from "../../../services/util/ordenacaoDeGrid";
 import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
 import { useModal } from "../../../hooks/useModal";
@@ -110,16 +111,22 @@ export default function SubServiceCategoryGrid({ searchTerm = "" }: SubServiceCa
         });
     }, [subCategorys, searchTerm]);
 
+    // Título em ordem, desativadas no fim.
+    const subCategoriasOrdenadas = useMemo(
+        () => ordenarPorNomeComDesativadosNoFim(filteredLeads, (subCategory) => subCategory.titulo),
+        [filteredLeads]
+    );
+
     const paginatedLeads = useMemo(() => {
-        return filteredLeads.slice(
+        return subCategoriasOrdenadas.slice(
             (currentPage - 1) * itemsPerPage,
             currentPage * itemsPerPage
         );
-    }, [filteredLeads, currentPage, itemsPerPage]);
+    }, [subCategoriasOrdenadas, currentPage, itemsPerPage]);
 
     const totalPages = useMemo(() => {
-        return Math.ceil(filteredLeads.length / itemsPerPage);
-    }, [filteredLeads.length, itemsPerPage]);
+        return Math.ceil(subCategoriasOrdenadas.length / itemsPerPage);
+    }, [subCategoriasOrdenadas.length, itemsPerPage]);
 
     // FUNÇÕES AUXILIARES -----------------
     const handleOpenModal = (id: string) => {

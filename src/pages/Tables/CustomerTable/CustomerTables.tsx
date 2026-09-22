@@ -14,6 +14,7 @@ import InputMask from "react-input-mask";
 import { getUserRoleFromToken, isReadOnlyRole } from "../../../services/util/rolePermissions";
 import InsightStrip from "../../../components/insights/InsightStrip";
 import { INSIGHTS_DA_TELA_CLIENTE } from "../../../config/insightsRegistry";
+import { OPCOES_DE_STATUS_DO_PACIENTE } from "../../../services/util/customerStatus";
 
 type SortField = 'nome' | 'sessoes' | 'status' | null;
 type SortDirection = 'asc' | 'desc';
@@ -99,19 +100,10 @@ export default function CustomerTables() {
     }
   };
 
-  const statusOptions = [
-    { value: "", label: "Todos" },
-    { value: "0", label: "Novo Paciente" },
-    { value: "1", label: "Aguardando Avaliação" },
-    { value: "2", label: "Em Avaliação" },
-    { value: "3", label: "Plano de Tratamento" },
-    { value: "4", label: "Em Atendimento" },
-    { value: "5", label: "Faltou Atendimento" },
-    { value: "6", label: "Tratamento Concluído" },
-    { value: "7", label: "Alta" },
-    { value: "8", label: "Cancelado" },
-    { value: "9", label: "Inativo" },
-  ];
+  // Rótulos vêm de um lugar só: a lista estava repetida aqui, no card do paciente e no
+  // detalhe, e era questão de tempo até divergirem.
+  // O Select tipa as opções como mutáveis; a cópia preserva a lista compartilhada.
+  const statusOptions = [...OPCOES_DE_STATUS_DO_PACIENTE];
 
   return (
     <>

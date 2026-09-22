@@ -26,11 +26,14 @@ import { disableCustomerAsync, getAllCustomersAsync, restoreCustomerAsync } from
 import { CustomerRequestDto } from "../../../services/model/Dto/Request/CustomerRequestDto";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { formatPhone, formatCPF } from "../../helper/formatUtils";
+import { formatPhone, formatCPF, formatDate } from "../../helper/formatUtils";
+import { exportTable, type ColunaExport, type FormatoExport } from "../../../utils/exportTable";
+import { rotuloDeStatusDoPaciente } from "../../../services/util/customerStatus";
+import { compararPorNome, estaDesativado } from "../../../services/util/ordenacaoDeGrid";
 import FormMetaDataCustomer from "../../../pages/Forms/Customer/FormMetaDataCustomer";
 import FormSession from "../../../pages/Forms/OrderServiceForms/FormSession";
 import { CustomerFilterRequestDto } from "../../../services/model/Dto/Request/CustomerFilterRequestDto";
-import { getUserRoleFromToken, userHasRole, USER_ROLES, isReadOnlyRole } from "../../../services/util/rolePermissions";
+import { getUserRoleFromToken, userHasRole, USER_ROLES, isReadOnlyRole, canExportCustomers } from "../../../services/util/rolePermissions";
 import { ETipoCheckIn } from "../../../services/model/Enum/ETipoCheckIn";
 import {
     DesativacaoBodyCells,
@@ -72,6 +75,8 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
                              !userHasRole(userRoles, USER_ROLES.COORDENADOR_FISIOTERAPEUTA);
     // Financeiro: somente leitura, sem botões de edição/exclusão
     const isReadOnly = isReadOnlyRole(userRoles);
+    // Exportação sai com a base pessoal inteira; o botão só existe para quem pode levá-la.
+    const podeExportar = canExportCustomers(userRoles);
     // Administrador vê os pacientes excluídos logicamente e pode restaurá-los
     const canManageDeleted = useCanManageDeletedRecords();
 
@@ -84,22 +89,36 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
     })
 
     // Paginação
-    const paginatedClientes = useMemo(() => {
+    /**
+     * A lista inteira do filtro, na ordem escolhida no cabeçalho.
+     *
+     * Separada da paginação porque a exportação também precisa dela: o arquivo sai com todas
+     * as linhas do filtro, mas na mesma ordem que está na tela. Enquanto ordenar e paginar
+     * eram o mesmo passo, exportar entregava a ordem crua da API e o arquivo não batia com o
+     * que o usuário tinha acabado de ordenar.
+     */
+    const clientesOrdenados = useMemo(() => {
         if (!Array.isArray(clientes) || clientes.length === 0) {
             return [];
         }
 
         let sortedClientes = [...clientes];
 
-        // Aplicar ordenação se houver
-        if (sortField && sortDirection) {
-            sortedClientes.sort((a, b) => {
+        sortedClientes.sort((a, b) => {
+            // Desativado sempre no fim, qualquer que seja a coluna escolhida: o registro
+            // continua consultavel e restauravel, mas nao disputa as primeiras linhas com
+            // quem esta ativo.
+            const desativacao = Number(estaDesativado(a)) - Number(estaDesativado(b));
+            if (desativacao !== 0) return desativacao;
+
+            // Sem coluna escolhida, a ordem util e o nome — nao a ordem crua da API.
+            if (!sortField || !sortDirection) return compararPorNome(a.nome, b.nome);
+
+            {
                 let compareValue = 0;
 
                 if (sortField === 'nome') {
-                    const nomeA = a.nome?.toLowerCase() || '';
-                    const nomeB = b.nome?.toLowerCase() || '';
-                    compareValue = nomeA.localeCompare(nomeB);
+                    compareValue = compararPorNome(a.nome, b.nome);
                 } else if (sortField === 'sessoes') {
                     // Calcula quantidade de sessões Plano realizadas para cada paciente
                     const sessoesA = (a.servicos ?? [])
@@ -131,14 +150,20 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
                 // Inverte se for descendente
                 return sortDirection === 'asc' ? compareValue : -compareValue;
-            });
-        }
+            }
+        });
 
-        return sortedClientes.slice(
-            (currentPage - 1) * itemsPerPage,
-            currentPage * itemsPerPage
-        );
-    }, [clientes, currentPage, itemsPerPage, sortField, sortDirection]);
+        return sortedClientes;
+    }, [clientes, sortField, sortDirection]);
+
+    const paginatedClientes = useMemo(
+        () =>
+            clientesOrdenados.slice(
+                (currentPage - 1) * itemsPerPage,
+                currentPage * itemsPerPage
+            ),
+        [clientesOrdenados, currentPage, itemsPerPage]
+    );
 
     const totalPages = useMemo(() => {
         return Math.ceil((clientes?.length || 0) / itemsPerPage);
@@ -254,6 +279,55 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
         openModalData();
     }
 
+    /**
+     * Colunas do arquivo exportado.
+     *
+     * Mais largo do que o grid de propósito: quem exporta vai cruzar a base em planilha, e
+     * endereço e patologia são justamente o que não cabe na tela. Datas e documentos saem
+     * formatados como aparecem no sistema, para o arquivo bater com o que o usuário vê.
+     */
+    const colunasDoArquivo: ColunaExport<CustomerResponseDto>[] = [
+        { titulo: "Nome", valor: (cliente) => cliente.nome },
+        { titulo: "CPF", valor: (cliente) => formatCPF(cliente.cpf) },
+        { titulo: "RG", valor: (cliente) => cliente.rg ?? "" },
+        { titulo: "Documento", valor: (cliente) => cliente.documentoIdentificacao ?? "" },
+        { titulo: "Telefone", valor: (cliente) => formatPhone(cliente.nrTelefone) },
+        { titulo: "E-mail", valor: (cliente) => cliente.email ?? "" },
+        { titulo: "Nascimento", valor: (cliente) => formatDate(cliente.dataNascimento) },
+        { titulo: "Sexo", valor: (cliente) => (cliente.sexo === 0 ? "Masculino" : "Feminino") },
+        { titulo: "Status", valor: (cliente) => rotuloDeStatusDoPaciente(cliente.status) },
+        { titulo: "Patologia", valor: (cliente) => cliente.patologia ?? "" },
+        { titulo: "Rua", valor: (cliente) => cliente.endereco?.rua ?? "" },
+        { titulo: "Número", valor: (cliente) => cliente.endereco?.numero ?? "" },
+        { titulo: "Bairro", valor: (cliente) => cliente.endereco?.bairro ?? "" },
+        { titulo: "Cidade", valor: (cliente) => cliente.endereco?.cidade ?? "" },
+        { titulo: "Estado", valor: (cliente) => cliente.endereco?.estado ?? "" },
+        { titulo: "CEP", valor: (cliente) => cliente.endereco?.cep ?? "" },
+        { titulo: "Cadastrado em", valor: (cliente) => formatDate(cliente.dataCadastro) },
+        { titulo: "Cadastrado por", valor: (cliente) => cliente.usrDescricaoCadastro ?? cliente.usrCadastroDesc ?? "" },
+    ];
+
+    /**
+     * Exporta o que o grid está mostrando, com o filtro que estiver aplicado.
+     *
+     * Sem ida à rede: a listagem já está em memória, e refazer a busca traria o risco de o
+     * arquivo divergir da tela entre um clique e outro.
+     */
+    // Todas as linhas do filtro, na ordem da tela. Exportar so a pagina aberta nao serviria
+    // para nada; exportar fora de ordem faria o arquivo nao bater com o grid.
+    const pacientes: CustomerResponseDto[] = clientesOrdenados;
+
+    const exportar = (formato: FormatoExport) => {
+        try {
+            const arquivo = exportTable(pacientes, colunasDoArquivo, "pacientes", formato);
+            toast.success(`${pacientes.length} paciente(s) exportado(s) em ${arquivo}`);
+        } catch (erro) {
+            toast.error(
+                erro instanceof Error ? erro.message : "Não foi possível gerar o arquivo."
+            );
+        }
+    };
+
     if (isLoading)
         return <p className="text-dark dark:text-white">Carregando pacientes...</p>;
     if (isError)
@@ -270,6 +344,30 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
     return (
         <>
+            {podeExportar && (
+                <div className="mb-3 flex items-center justify-end gap-2">
+                    <span className="mr-auto text-theme-xs text-gray-500 dark:text-gray-400">
+                        {pacientes.length} paciente(s) no filtro atual
+                    </span>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pacientes.length === 0}
+                        onClick={() => exportar("csv")}
+                    >
+                        CSV
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pacientes.length === 0}
+                        onClick={() => exportar("xlsx")}
+                    >
+                        Excel
+                    </Button>
+                </div>
+            )}
+
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
                 <div className="max-w-full overflow-x-auto">
                     <Table className="table-auto">
