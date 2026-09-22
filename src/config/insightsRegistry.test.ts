@@ -129,6 +129,15 @@ describe("insightsRegistry", () => {
       });
   });
 
+  it("Planos acabando abre a conversa com o texto de renovação acordado", () => {
+    // Texto definido pelo negócio; o token é resolvido por linha em InsightDetalhe.
+    expect(INSIGHTS.PlanoAcabando.mensagemWhatsapp).toBe(
+      "Olá {nome_cliente}, tudo bem? Estamos observando e você está no final de suas sessões " +
+        "como tem sido o atendimento tem se sentido melhor, acha que podemos continuar a " +
+        "contribuir na sua evolução e viver sem dor?"
+    );
+  });
+
   it("a faixa de Pacientes traz os 6 insights de venda e os 27 de qualidade", () => {
     expect(INSIGHTS_DA_TELA_CLIENTE).toHaveLength(33);
     expect(new Set(INSIGHTS_DA_TELA_CLIENTE).size).toBe(33);
