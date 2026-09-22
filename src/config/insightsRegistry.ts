@@ -31,7 +31,11 @@ export interface DefinicaoInsight {
   escopo: EscopoInsight;
   /** Padrão `whatsapp`, para os insights de venda continuarem como estavam. */
   tipoAcao?: TipoDeAcaoInsight;
-  /** Mensagem que abre a conversa no WhatsApp. Obrigatória apenas quando a ação é `whatsapp`. */
+  /**
+   * Mensagem que abre a conversa no WhatsApp. Obrigatória apenas quando a ação é `whatsapp`.
+   * Aceita o token `{nome_cliente}`, trocado pelo nome do paciente da linha antes de montar
+   * o link (ver `aplicarNomeNaMensagem`).
+   */
   mensagemWhatsapp?: string;
   colunas: ColunaInsight[];
   /** Janela em dias configurável pelo usuário, quando o insight aceita. */
@@ -229,7 +233,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Ligar para renovar",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros 😀 Vi que seu plano está chegando ao fim. Podemos conversar sobre a renovação?",
+      "Olá {nome_cliente}, tudo bem? Estamos observando e você está no final de suas sessões como tem sido o atendimento tem se sentido melhor, acha que podemos continuar a contribuir na sua evolução e viver sem dor?",
     colunas: [
       colunaPaciente,
       { titulo: "Restantes", valor: metrica("Sessões restantes"), numerica: true },

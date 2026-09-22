@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { montarLinkWhatsapp, MENSAGEM_PADRAO_WHATSAPP } from "./whatsappLink";
+import {
+  aplicarNomeNaMensagem,
+  montarLinkWhatsapp,
+  MENSAGEM_PADRAO_WHATSAPP,
+} from "./whatsappLink";
 
 describe("montarLinkWhatsapp", () => {
   it("remove máscara e prefixa o DDI do Brasil", () => {
@@ -43,5 +47,47 @@ describe("montarLinkWhatsapp", () => {
   it("devolve null quando o telefone não tem dígitos suficientes", () => {
     // Menos que DDD + 8 dígitos não é telefone: abrir o WhatsApp nesse número só gera erro.
     expect(montarLinkWhatsapp("1199")).toBeNull();
+  });
+});
+
+describe("aplicarNomeNaMensagem", () => {
+  const TEMPLATE = "Olá {nome_cliente}, tudo bem? Estamos observando...";
+
+  it("troca o token pelo nome do paciente", () => {
+    expect(aplicarNomeNaMensagem(TEMPLATE, "Rafaela Dos Santos Fraga")).toBe(
+      "Olá Rafaela Dos Santos Fraga, tudo bem? Estamos observando..."
+    );
+  });
+
+  it("remove o token e o espaço antes dele quando não há nome", () => {
+    // Sem isso a paciente receberia "Olá , tudo bem?" — ou, pior, o token cru.
+    expect(aplicarNomeNaMensagem(TEMPLATE, "")).toBe("Olá, tudo bem? Estamos observando...");
+    expect(aplicarNomeNaMensagem(TEMPLATE, null)).toBe("Olá, tudo bem? Estamos observando...");
+    expect(aplicarNomeNaMensagem(TEMPLATE, undefined)).toBe("Olá, tudo bem? Estamos observando...");
+    expect(aplicarNomeNaMensagem(TEMPLATE, "   ")).toBe("Olá, tudo bem? Estamos observando...");
+  });
+
+  it("nunca deixa o token vazar para a mensagem enviada", () => {
+    expect(aplicarNomeNaMensagem(TEMPLATE, "Ana")).not.toContain("{nome_cliente}");
+    expect(aplicarNomeNaMensagem(TEMPLATE, "")).not.toContain("{nome_cliente}");
+  });
+
+  it("descarta espaço nas pontas do nome", () => {
+    expect(aplicarNomeNaMensagem(TEMPLATE, "  Ana  ")).toContain("Olá Ana,");
+  });
+
+  it("deixa intacta a mensagem que não usa o token", () => {
+    const semToken = "Parabéns! 🎉 Feliz aniversário!";
+
+    expect(aplicarNomeNaMensagem(semToken, "Ana")).toBe(semToken);
+    expect(aplicarNomeNaMensagem(semToken, "")).toBe(semToken);
+  });
+
+  it("monta o link já com o nome aplicado", () => {
+    const mensagem = aplicarNomeNaMensagem(TEMPLATE, "Rafaela Dos Santos Fraga");
+    const link = montarLinkWhatsapp("11971966568", mensagem);
+
+    expect(link).toContain("wa.me/5511971966568?");
+    expect(link).toContain(encodeURIComponent("Olá Rafaela Dos Santos Fraga, tudo bem?"));
   });
 });
