@@ -11,7 +11,7 @@ import { obterInsight } from "../../config/insightsRegistry";
 import { useInsightItens, useRegistrarAcompanhamento } from "../../hooks/useInsights";
 import InsightsService from "../../services/service/InsightsService";
 import { exportTable, type ColunaExport } from "../../utils/exportTable";
-import { montarLinkWhatsapp } from "../../utils/whatsappLink";
+import { aplicarNomeNaMensagem, montarLinkWhatsapp } from "../../utils/whatsappLink";
 import { Modal } from "../../components/ui/modal";
 import FormCustomer from "../Forms/Customer/FormCustomer";
 import { getCustomerIdAsync } from "../../services/service/CustomerService";
@@ -375,9 +375,16 @@ export default function InsightDetalhe() {
                   // funcionário. Antes o componente estava preso ao de paciente.
                   const acaoDeFicha = definicao.tipoAcao === "fichaDeFuncionario";
                   const acaoDeCadastro = definicao.tipoAcao === "cadastro" || acaoDeFicha;
+                  // A mensagem do registry pode trazer {nome_cliente}: quem resolve o token e
+                  // a linha e nao o registry, que nao conhece o paciente.
                   const linkWhatsapp = acaoDeCadastro
                     ? null
-                    : montarLinkWhatsapp(item.telefone, definicao.mensagemWhatsapp);
+                    : montarLinkWhatsapp(
+                        item.telefone,
+                        definicao.mensagemWhatsapp
+                          ? aplicarNomeNaMensagem(definicao.mensagemWhatsapp, item.clienteNome)
+                          : undefined
+                      );
 
                   return (
                     <TableRow key={item.referenciaId}>
