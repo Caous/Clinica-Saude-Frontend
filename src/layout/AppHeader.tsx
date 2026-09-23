@@ -88,11 +88,15 @@ const AppHeader: React.FC = () => {
               className="dark:hidden"
               src="./images/logo/instituto-barros-logo-cinza.png"
               alt="Logo"
+              width={124}
+              height={40}
             />
             <img
               className="hidden dark:block"
               src="./images/logo/instituto-barros-logo-branco.webp"
               alt="Logo"
+              width={124}
+              height={40}
             />
           </Link>
 
