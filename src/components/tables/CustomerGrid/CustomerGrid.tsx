@@ -336,7 +336,7 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
 
     const optionsEmailEdit = [
         { value: "0", label: "Comercial" },
-        { value: "1", label: "Raphael Barros" },
+        { value: "1", label: "Profissional Exemplo" },
         { value: "2", label: "Parceria" },
         { value: "3", label: "Fisio" }
     ];
@@ -413,7 +413,7 @@ export default function CustomerTableComponent({ filters, sortField, sortDirecti
                                     </TableCell>
                                     <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                                         <a
-                                            href={`https://wa.me/+55${customer.nrTelefone?.replace('(', '').replace(')', '').replace('-', '').replace(' ', '')}?text=Ol%C3%A1%20tudo%20bem%3F%20Somos%20a%20equipe%20do%20Instituto%20Barros%20%F0%9F%98%80`}
+                                            href={`https://wa.me/+55${customer.nrTelefone?.replace('(', '').replace(')', '').replace('-', '').replace(' ', '')}?text=Ol%C3%A1%20tudo%20bem%3F%20Somos%20a%20equipe%20da%20cl%C3%ADnica%20%F0%9F%98%80`}
                                             target="_blank"
                                             rel="noopener"
                                         >{formatPhone(customer.nrTelefone)}

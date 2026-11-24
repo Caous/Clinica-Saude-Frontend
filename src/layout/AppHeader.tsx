@@ -1,3 +1,4 @@
+import { useBranding } from "../hooks/useBranding";
 import { useEffect, useRef, useState } from "react";
 
 import { Link } from "react-router";
@@ -7,6 +8,7 @@ import NotificationDropdown from "../components/header/NotificationDropdown";
 import UserDropdown from "../components/header/UserDropdown";
 
 const AppHeader: React.FC = () => {
+  const brand = useBranding();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
@@ -86,15 +88,15 @@ const AppHeader: React.FC = () => {
           <Link to="/" className="lg:hidden">
             <img
               className="dark:hidden"
-              src="./images/logo/instituto-barros-logo-cinza.png"
-              alt="Logo"
+              src={brand.logoLightUrl}
+              alt={brand.name}
               width={124}
               height={40}
             />
             <img
               className="hidden dark:block"
-              src="./images/logo/instituto-barros-logo-branco.webp"
-              alt="Logo"
+              src={brand.logoDarkUrl}
+              alt={brand.name}
               width={124}
               height={40}
             />

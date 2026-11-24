@@ -21,11 +21,11 @@ export default function OrdemServiceTables() {
     return (
         <>
               <PageMeta
-                title="Instituto Barros - Sistema"
-                description="Sistema Instituto Barros - Página para gerenciamento tratamento"
+                title="Tratamento e Sessão"
+                description="Página para gerenciamento tratamento"
             />
 
-            <PageBreadcrumb pageTitle="Tratamento & Sessão Instituto Barros" />
+            <PageBreadcrumb pageTitle="Tratamento & Sessão" />
 
             <div className="flex justify-between gap-6 mb-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">

@@ -1,3 +1,4 @@
+import { FALLBACK_BRANDING } from "../config/branding";
 // Modelo de importação de pacientes (clientes) via planilha.
 //
 // Fonte da verdade: parser do endpoint POST /Customer/AddCustomerFromExcel
@@ -75,8 +76,8 @@ export const CUSTOMER_IMPORT_COLUMNS: CustomerImportColumn[] = [
 const UTF8_BOM = "﻿";
 
 /** Título exibido na linha 1 do modelo (ignorada pela importação). */
-export const CUSTOMER_IMPORT_TITLE =
-  "Modelo de Importação de Pacientes — Instituto Barros";
+export const buildCustomerImportTitle = (brandName: string): string =>
+  `Modelo de Importação de Pacientes — ${brandName}`;
 
 /** Instrução exibida na linha 2 do modelo (ignorada pela importação). */
 export const CUSTOMER_IMPORT_INSTRUCTION =
@@ -101,7 +102,7 @@ export const CUSTOMER_IMPORT_INSTRUCTION =
  * - Segue RFC 4180: campos com vírgula/aspas/CR/LF são escapados e as linhas
  *   são separadas por CRLF.
  */
-export function buildCustomerImportCsvTemplate(): string {
+export function buildCustomerImportCsvTemplate(brandName: string = FALLBACK_BRANDING.name): string {
   const escape = (value: string): string =>
     /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 
@@ -111,7 +112,7 @@ export function buildCustomerImportCsvTemplate(): string {
   const linhaMeta = (primeiraColuna: string): string =>
     [escape(primeiraColuna), ...Array(totalColunas - 1).fill("")].join(",");
 
-  const titulo = linhaMeta(CUSTOMER_IMPORT_TITLE);
+  const titulo = linhaMeta(buildCustomerImportTitle(brandName));
   const instrucao = linhaMeta(CUSTOMER_IMPORT_INSTRUCTION);
   const linhaVazia = Array(totalColunas).fill("").join(",");
   const cabecalho = CUSTOMER_IMPORT_COLUMNS.map((c) => escape(c.header)).join(",");

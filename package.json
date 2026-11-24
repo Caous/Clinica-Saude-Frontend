@@ -1,9 +1,10 @@
 {
-  "name": "tailadmin-react",
+  "name": "sistema-clinica-intranet",
   "private": true,
   "version": "2.0.1",
   "type": "module",
   "scripts": {
+    "check:brand": "node scripts/check-brand.mjs .",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

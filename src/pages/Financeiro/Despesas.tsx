@@ -145,7 +145,7 @@ export default function Despesas() {
     <>
       <PageMeta
         title="Lançamentos Financeiros - Financeiro"
-        description="Gerencie todas as transações financeiras do instituto"
+        description="Gerencie todas as transações financeiras da clínica"
       />
       <div className="grid grid-cols-1 gap-4 md:gap-6">
         <PageBreadcrumb pageTitle="Lançamentos Financeiros" />
@@ -164,7 +164,7 @@ export default function Despesas() {
                   Gestão Financeira
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400">
-                  Controle todas as saídas e recebimentos do instituto
+                  Controle todas as saídas e recebimentos da clínica
                 </p>
                 {!isLoadingStats && (
                   <p className="text-sm text-gray-400 mt-1">

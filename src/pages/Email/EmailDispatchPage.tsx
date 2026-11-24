@@ -12,8 +12,9 @@ import {
 import { CustomerResponseDto } from "../../services/model/Dto/Response/CustomerResponseDto";
 import EmailPreview from "../../components/Email/EmailPreview";
 import EmailEditor from "../../components/Email/EmailEditor";
+import { useBranding } from "../../hooks/useBranding";
 import { getTemplateList, getTemplateById } from "../../constants/emailTemplates";
-import { EmailVariables, replaceVariables } from "../../utils/emailVariables";
+import { EmailVariables, buildDispatchBody } from "../../utils/emailVariables";
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   Pendente: { label: "Pendente", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
@@ -24,6 +25,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 };
 
 export default function EmailDispatchPage() {
+  const brand = useBranding();
   const [dispatches, setDispatches] = useState<EmailDispatchResponseDto[]>([]);
   const [configs, setConfigs] = useState<EmailConfigurationResponseDto[]>([]);
   const [customers, setCustomers] = useState<CustomerResponseDto[]>([]);
@@ -104,9 +106,10 @@ export default function EmailDispatchPage() {
       return;
     }
     
-    const template = getTemplateById(templateId);
+    const template = getTemplateById(templateId, brand);
     if (template) {
-      setForm((prev) => ({ ...prev, corpo: template.html }));
+      setForm((prev) => ({ ...prev, corpo: template.html, titulo: prev.titulo || template.subject }));
+      setTemplateVariables((prev) => ({ ...prev, titulo: prev.titulo || template.subject }));
       
       // Inicializa variáveis específicas do template
       if (templateId === 'promocional') {
@@ -152,10 +155,12 @@ export default function EmailDispatchPage() {
       // Se há template selecionado, substitui as variáveis do template antes de enviar
       let corpoFinal = form.corpo;
       if (selectedTemplate) {
-        corpoFinal = replaceVariables(form.corpo, {
-          ...templateVariables,
+        corpoFinal = buildDispatchBody({
+          corpo: form.corpo,
           titulo: form.titulo,
-        }, false); // useDefaults = false para não substituir variáveis do cliente
+          templateVariables,
+          brandName: brand.name,
+        });
       }
       
       await EmailDispatchService.send({
@@ -282,7 +287,7 @@ export default function EmailDispatchPage() {
                   </select>
                   {selectedTemplate && (
                     <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                      {getTemplateById(selectedTemplate)?.description}
+                      {getTemplateById(selectedTemplate, brand)?.description}
                     </p>
                   )}
                 </div>
@@ -293,7 +298,7 @@ export default function EmailDispatchPage() {
                   <input
                     className={inputClass}
                     required
-                    placeholder="Ex: Novidades do Instituto Barros"
+                    placeholder={`Ex: Novidades - ${brand.name}`}
                     value={form.titulo}
                     onChange={(e) => {
                       setForm((p) => ({ ...p, titulo: e.target.value }));

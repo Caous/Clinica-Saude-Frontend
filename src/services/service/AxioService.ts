@@ -1,9 +1,13 @@
 
 import axios from "axios";
 import toast from "react-hot-toast";
+import { resolveApiBaseUrl } from "./apiBaseUrl";
 
 export const instanceApi = axios.create({
-  baseURL: import.meta.env.PROD ? "https://instituto-barros-sistema.azurewebsites.net/api" : "http://localhost:5101/api",
+  baseURL: resolveApiBaseUrl({
+    isProduction: import.meta.env.PROD,
+    configuredUrl: import.meta.env.VITE_API_BASE_URL,
+  }),
   timeout: 30000, // 30 segundos
 });
 
@@ -26,7 +30,9 @@ instanceApi.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 429) {
+    // /Branding é anônimo e best-effort (há fallback): falhas dele não geram toast.
+    const isBrandingRequest = String(error.config?.url ?? "").includes("/Branding");
+    if (error.response?.status === 429 && !isBrandingRequest) {
       toast.error("Muitas tentativas de solicitação ao servidor, por favor tente daqui 1 minuto novamente", {
         duration: 5000,
         position: "top-center",

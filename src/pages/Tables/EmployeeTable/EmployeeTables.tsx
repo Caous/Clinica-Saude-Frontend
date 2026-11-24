@@ -20,11 +20,11 @@ export default function EmployeeTables() {
     return (
         <>
             <PageMeta
-                title="Instituto Barros - Sistema"
-                description="Sistema Instituto Barros - Página para gerenciamento de funcionários"
+                title="Funcionários"
+                description="Página para gerenciamento de funcionários"
             />
 
-            <PageBreadcrumb pageTitle="Funcionários Instituto Barros" />
+            <PageBreadcrumb pageTitle="Funcionários" />
 
             {/*
               A faixa e o grid são irmãos e cada um tem a sua própria consulta: nenhum dos dois

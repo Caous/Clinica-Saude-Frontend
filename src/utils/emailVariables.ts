@@ -1,3 +1,5 @@
+import { FALLBACK_BRANDING } from '../config/branding';
+
 /**
  * Helper para substituição de variáveis em templates de email
  * 
@@ -11,7 +13,7 @@
  * - {{endereco_completo}}   - Endereço completo formatado (rua, número, complemento, bairro, cidade, estado, CEP)
  * - {{data_atual}}          - Data atual formatada (dd/MM/yyyy)
  * - {{ano_atual}}           - Ano atual (yyyy)
- * - {{empresa}}             - Nome da empresa (Instituto Barros)
+ * - {{empresa}}             - Nome da empresa (marca configurada)
  * - {{titulo}}              - Título/assunto do email
  * - {{conteudo}}            - Conteúdo principal do email (usado nos templates)
  * - {{corpo}}               - Corpo/conteúdo do email (usado quando não há template)
@@ -53,9 +55,9 @@ export const DEFAULT_VARIABLES: EmailVariables = {
   estado_cliente: 'SP',
   cpf_cliente: '123.456.789-00',
   endereco_completo: 'Rua Exemplo, nº 123, Centro, São Paulo, SP, CEP: 01234-567',
-  titulo: 'Novidades do Instituto Barros',
+  titulo: `Novidades - ${FALLBACK_BRANDING.name}`,
   conteudo: '<p style="font-size: 16px; margin-bottom: 15px;">Temos <strong>ótimas novidades</strong> para você! Nossa equipe trabalha constantemente para oferecer o melhor atendimento.</p><p style="font-size: 16px;">Entre em contato conosco para saber mais!</p>',
-  empresa: 'Instituto Barros',
+  empresa: FALLBACK_BRANDING.name,
   ano_atual: new Date().getFullYear().toString(),
   data_atual: new Date().toLocaleDateString('pt-BR', { 
     day: '2-digit',
@@ -164,47 +166,22 @@ export function formatVariableName(variableName: string): string {
 }
 
 /**
- * Cria um objeto de variáveis a partir de dados do cliente
- * Útil para o backend ao enviar emails reais
- * 
- * @param customerData - Dados do cliente
- * @param customVars - Variáveis customizadas adicionais
- * @returns Objeto com variáveis preenchidas
+ * Monta o corpo final do disparo: preenche {{titulo}} e {{empresa}} (marca configurada),
+ * preservando as variáveis do cliente para o backend preencher por destinatário.
+ * Variáveis explícitas do template têm precedência sobre a marca.
  */
-export function createVariablesFromCustomer(
-  customerData: {
-    nome?: string;
-    email?: string;
-    telefone?: string;
-    cidade?: string;
-    estado?: string;
-    cpf?: string;
-    [key: string]: any;
-  },
-  customVars: EmailVariables = {}
-): EmailVariables {
-  const now = new Date();
-  
-  return {
-    nome_cliente: customerData.nome || 'Cliente',
-    email_cliente: customerData.email || '',
-    telefone_cliente: customerData.telefone || '',
-    cidade_cliente: customerData.cidade || '',
-    estado_cliente: customerData.estado || '',
-    cpf_cliente: customerData.cpf || '',
-    empresa: 'Instituto Barros',
-    ano_atual: now.getFullYear().toString(),
-    data_atual: now.toLocaleDateString('pt-BR', { 
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }),
-    hora: now.toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    }),
-    ...customVars,
-  };
+export function buildDispatchBody({
+  corpo,
+  titulo,
+  templateVariables,
+  brandName,
+}: {
+  corpo: string;
+  titulo: string;
+  templateVariables: EmailVariables;
+  brandName: string;
+}): string {
+  return replaceVariables(corpo, { empresa: brandName, ...templateVariables, titulo }, false);
 }
 
 /**

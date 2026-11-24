@@ -251,7 +251,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Resgatar paciente",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros 😀 Sentimos sua falta nas últimas semanas. Vamos remarcar sua próxima sessão?",
+      "Olá! Aqui é da clínica 😀 Sentimos sua falta nas últimas semanas. Vamos remarcar sua próxima sessão?",
     diasPadrao: 14,
     colunas: [
       colunaPaciente,
@@ -270,7 +270,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Parabenizar",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Parabéns {nome_cliente}! A equipe do Instituto Barros deseja um feliz aniversário para você, que você viva esse próximo ano de muitas alegrias e sem dor. 🙏🏻\n\nConte sempre conosco.",
+      "Parabéns {nome_cliente}! A equipe da clínica deseja um feliz aniversário para você, que você viva esse próximo ano de muitas alegrias e sem dor. 🙏🏻\n\nConte sempre conosco.",
     colunas: [
       colunaPaciente,
       { titulo: "Idade", valor: metrica("Idade"), numerica: true },
@@ -288,7 +288,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Cobrar",
     escopo: "financeiro",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros. Identificamos uma parcela em aberto. Podemos ajudar a regularizar?",
+      "Olá! Aqui é da clínica. Identificamos uma parcela em aberto. Podemos ajudar a regularizar?",
     colunas: [
       colunaPaciente,
       { titulo: "Valor", valor: moedaBr, numerica: true },
@@ -306,7 +306,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Oferecer novo plano",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros 😀 Você concluiu seu plano conosco. Vamos montar a próxima etapa do seu tratamento?",
+      "Olá! Aqui é da clínica 😀 Você concluiu seu plano conosco. Vamos montar a próxima etapa do seu tratamento?",
     diasPadrao: 3,
     colunas: [
       colunaPaciente,
@@ -324,7 +324,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Remarcar",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros. Sentimos sua falta na sessão de ontem. Vamos remarcar?",
+      "Olá! Aqui é da clínica. Sentimos sua falta na sessão de ontem. Vamos remarcar?",
     colunas: [
       colunaPaciente,
       { titulo: "Data da falta", valor: dataBr },
@@ -341,7 +341,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Confirmar",
     escopo: "cliente",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros. Podemos confirmar sua sessão de amanhã?",
+      "Olá! Aqui é da clínica. Podemos confirmar sua sessão de amanhã?",
     colunas: [
       colunaPaciente,
       { titulo: "Horário", valor: (item) => (item.data ? new Date(item.data).toLocaleString("pt-BR") : "—") },
@@ -357,7 +357,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Lembrar",
     escopo: "financeiro",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros. Passando para lembrar da parcela que vence nos próximos dias.",
+      "Olá! Aqui é da clínica. Passando para lembrar da parcela que vence nos próximos dias.",
     diasPadrao: 7,
     colunas: [
       colunaPaciente,
@@ -375,7 +375,7 @@ export const INSIGHTS: Record<string, DefinicaoInsight> = {
     acao: "Regularizar",
     escopo: "financeiro",
     mensagemWhatsapp:
-      "Olá! Aqui é do Instituto Barros. Precisamos acertar o pagamento do seu plano. Podemos ajudar?",
+      "Olá! Aqui é da clínica. Precisamos acertar o pagamento do seu plano. Podemos ajudar?",
     colunas: [
       colunaPaciente,
       { titulo: "Contratadas", valor: metrica("Sessões contratadas"), numerica: true },

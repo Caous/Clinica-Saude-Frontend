@@ -20,11 +20,11 @@ export default function ServiceCategoryTables() {
     return (
         <>
               <PageMeta
-                title="Instituto Barros - Sistema"
-                description="Sistema Instituto Barros - Página para gerenciamento de Categoria Serviço"
+                title="Categoria de Serviço"
+                description="Página para gerenciamento de Categoria Serviço"
             />
 
-            <PageBreadcrumb pageTitle="Categoria Serviço Instituto Barros" />
+            <PageBreadcrumb pageTitle="Categoria Serviço" />
 
             <div className="flex justify-between gap-6 mb-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">

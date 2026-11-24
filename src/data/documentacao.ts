@@ -15,7 +15,9 @@ export interface DocDownload {
   /** MIME type do arquivo (ex.: "text/csv;charset=utf-8"). */
   mime: string;
   /** Conteúdo do arquivo, embutido no dado (nenhuma chamada ao backend). */
-  content: string;
+  content?: string;
+  /** Gera o conteúdo com o nome da marca configurada. Use `content` OU `buildContent`. */
+  buildContent?: (brandName: string) => string;
 }
 
 export interface DocSection {
@@ -254,7 +256,7 @@ export const DOCUMENTACAO: DocModule[] = [
             label: "Baixar modelo CSV",
             filename: "modelo-importacao-pacientes.csv",
             mime: "text/csv;charset=utf-8",
-            content: buildCustomerImportCsvTemplate(),
+            buildContent: buildCustomerImportCsvTemplate,
           },
         ],
       },
@@ -639,7 +641,7 @@ export const DOCUMENTACAO: DocModule[] = [
       {
         titulo: "O que é a Gestão Financeira",
         intro:
-          "Esta tela controla todas as saídas (despesas) e entradas (recebimentos) do instituto. No topo há 6 contadores que resumem o mês; abaixo, o grid (tabela) com cada lançamento e seus botões de ação.",
+          "Esta tela controla todas as saídas (despesas) e entradas (recebimentos) da clínica. No topo há 6 contadores que resumem o mês; abaixo, o grid (tabela) com cada lançamento e seus botões de ação.",
       },
       {
         titulo: "Criar um lançamento",

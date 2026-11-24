@@ -1,3 +1,4 @@
+import { useBranding } from "../hooks/useBranding";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 
@@ -231,6 +232,7 @@ const allNavItems: NavItem[] = [
 
 
 const AppSidebar: React.FC = () => {
+  const brand = useBranding();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
 
@@ -470,15 +472,15 @@ const AppSidebar: React.FC = () => {
             <>
               <img
                 className="dark:hidden"
-                src="/images/logo/instituto-barros-logo-cinza.png"
-                alt="Logo"
+                src={brand.logoLightUrl}
+                alt={brand.name}
                 width={150}
                 height={40}
               />
               <img
                 className="hidden dark:block"
-                src="/images/logo/instituto-barros-logo-branco.webp"
-                alt="Logo"
+                src={brand.logoDarkUrl}
+                alt={brand.name}
                 width={150}
                 height={40}
               />
@@ -486,17 +488,9 @@ const AppSidebar: React.FC = () => {
           ) : (
             <>
               <img
-                className="dark:hidden"
-                src="/images/logo/instituto-barros-logo-coluna-cinza.png"
-                alt="Logo"
-                width={26}
-                height={32}
-              />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/instituto-barros-logo-coluna-branco.png"
-                alt="Logo"
-                width={26}
+                src="/images/logo/logo-icon.svg"
+                alt={brand.name}
+                width={32}
                 height={32}
               />
             </>

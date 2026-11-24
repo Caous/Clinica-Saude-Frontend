@@ -108,11 +108,11 @@ export default function CustomerTables() {
   return (
     <>
       <PageMeta
-        title="Instituto Barros - Sistema"
-        description="Sistema Instituto Barros - Página para gerenciamento de pacientes"
+        title="Pacientes"
+        description="Página para gerenciamento de pacientes"
       />
 
-      <PageBreadcrumb pageTitle="Pacientes Instituto Barros" />
+      <PageBreadcrumb pageTitle="Pacientes" />
 
       <InsightStrip chaves={INSIGHTS_DA_TELA_CLIENTE} titulo="Oportunidades de hoje" />
 

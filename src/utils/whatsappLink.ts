@@ -1,6 +1,6 @@
 /** Saudação usada quando a tela não informa uma mensagem específica. */
 export const MENSAGEM_PADRAO_WHATSAPP =
-  "Olá tudo bem? Somos a equipe do Instituto Barros 😀";
+  "Olá tudo bem? Somos a equipe da clínica 😀";
 
 /**
  * Token que as mensagens do registry usam para marcar onde entra o nome do paciente.

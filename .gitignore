@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 nul
+
+# Variaveis de ambiente locais
+.env
+.env.local
+.env.*.local

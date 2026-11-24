@@ -127,8 +127,11 @@ describe("Módulo pacientes (UT-2)", () => {
     const download = secaoImport!.downloads![0];
     expect(download.filename).toMatch(/\.csv$/);
     expect(download.mime).toContain("text/csv");
-    expect(download.content).toContain("Nome");
-    expect(download.content).toContain("CPF");
+    expect(download.content).toBeUndefined();
+    const conteudo = download.buildContent!("Acme Saúde");
+    expect(conteudo).toContain("Nome");
+    expect(conteudo).toContain("CPF");
+    expect(conteudo).toContain("Acme Saúde");
   });
 });
 

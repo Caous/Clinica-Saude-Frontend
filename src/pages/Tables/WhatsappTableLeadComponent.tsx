@@ -7,8 +7,8 @@ export default function BasicTables() {
   return (
     <>
       <PageMeta
-        title="Instituto Barros - WhatsappLead"
-        description="Página do sistema Instituto Barros, para gerenciamento de lead"
+        title="WhatsappLead"
+        description="Página do sistema, para gerenciamento de lead"
       />
       <PageBreadcrumb pageTitle="Whatsapp" />
       <div className="space-y-6">

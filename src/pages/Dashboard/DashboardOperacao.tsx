@@ -73,8 +73,8 @@ export default function DashboardOperacao() {
     return (
       <>
         <PageMeta
-          title="Instituto Barros - Sistema"
-          description="Sistema Instituto Barros - Página para gerenciamento de Operação"
+          title="Operação"
+          description="Página para gerenciamento de Operação"
         />
         <PageBreadcrumb pageTitle="Dashboard de Operação" />
 
@@ -98,8 +98,8 @@ export default function DashboardOperacao() {
   return (
     <>
       <PageMeta
-        title="Instituto Barros - Sistema"
-        description="Sistema Instituto Barros - Página para gerenciamento de Operação"
+        title="Operação"
+        description="Página para gerenciamento de Operação"
       />
       <PageBreadcrumb pageTitle="Dashboard de Operação" />
 

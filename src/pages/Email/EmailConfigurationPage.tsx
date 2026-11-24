@@ -179,7 +179,7 @@ export default function EmailConfigurationPage() {
                   <input
                     className={inputClass}
                     required
-                    placeholder="Ex: Instituto Barros"
+                    placeholder="Ex: Clínica Exemplo"
                     value={form.nomeRemetente}
                     onChange={e => setForm(p => ({ ...p, nomeRemetente: e.target.value }))}
                   />
@@ -190,7 +190,7 @@ export default function EmailConfigurationPage() {
                     type="email"
                     className={inputClass}
                     required
-                    placeholder="contato@institutabarros.com"
+                    placeholder="contato@example.com"
                     value={form.email}
                     onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                   />
