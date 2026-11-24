@@ -7,14 +7,16 @@ import {
   DocSection,
   DocDownload,
 } from "../../data/documentacao";
+import { useBranding } from "../../hooks/useBranding";
 import {
   getUserRoleFromToken,
   userHasRole,
 } from "../../services/util/rolePermissions";
 
 /** Gera o arquivo no navegador (via Blob) e dispara o download. Sem backend. */
-function baixarArquivo(download: DocDownload) {
-  const blob = new Blob([download.content], { type: download.mime });
+function baixarArquivo(download: DocDownload, brandName: string) {
+  const content = download.buildContent?.(brandName) ?? download.content ?? "";
+  const blob = new Blob([content], { type: download.mime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -26,6 +28,7 @@ function baixarArquivo(download: DocDownload) {
 }
 
 function SectionAccordion({ section }: { section: DocSection }) {
+  const brand = useBranding();
   const [aberto, setAberto] = useState(false);
 
   return (
@@ -102,7 +105,7 @@ function SectionAccordion({ section }: { section: DocSection }) {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => baixarArquivo(d)}
+                  onClick={() => baixarArquivo(d, brand.name)}
                   className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                 >
                   <svg
@@ -149,7 +152,7 @@ export default function Documentacao() {
   return (
     <>
       <PageMeta
-        title="Sistema Instituto Barros - Documentação"
+        title="Documentação"
         description="Documentação do sistema para usuários — guia prático de cada menu"
       />
       <PageBreadcrumb pageTitle="Documentação" />

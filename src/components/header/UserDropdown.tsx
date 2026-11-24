@@ -1,3 +1,4 @@
+import { useBranding } from "../../hooks/useBranding";
 import { useEffect, useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
@@ -5,6 +6,7 @@ import { Link } from "react-router";
 import { parseJwt } from "../../services/util/jwtUtils";
 
 export default function UserDropdown() {
+  const brand = useBranding();
   const [isOpen, setIsOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string }>({
     email: "",
@@ -39,14 +41,9 @@ export default function UserDropdown() {
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
           <img 
-            className="dark:hidden w-full h-full object-contain p-1" 
-            src="/images/logo/instituto-barros-logo-coluna-cinza.png" 
-            alt="User" 
-          />
-          <img 
-            className="hidden dark:block w-full h-full object-contain p-1" 
-            src="/images/logo/instituto-barros-logo-coluna-branco.png" 
-            alt="User" 
+            className="w-full h-full object-contain p-1" 
+            src="/images/logo/logo-icon.svg" 
+            alt={brand.name} 
           />
         </span>
 

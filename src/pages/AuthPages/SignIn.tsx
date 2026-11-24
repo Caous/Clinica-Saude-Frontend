@@ -6,8 +6,8 @@ export default function SignIn() {
   return (
     <>
       <PageMeta
-        title="Instituto Barros - Sistema"
-        description="Instituto Barros - Sistema login"
+        title="Entrar"
+        description="Acesso ao sistema"
       />
       <AuthLayout>
         <SignInForm />

@@ -3,10 +3,24 @@
  * Utiliza variáveis dinâmicas no formato {{variavel}}
  */
 
+import type { Branding } from '../config/branding';
+
+/** Dados de marca necessários para montar os templates. */
+export type EmailBrand = Pick<Branding, 'name' | 'logoDarkUrl' | 'supportEmail'>;
+
+const escapeHtml = (text: string): string =>
+  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Logo relativo vira absoluto (clientes de e-mail não resolvem caminhos relativos). */
+const absoluteUrl = (url: string): string =>
+  /^https?:\/\//i.test(url) ? url : `${window.location.origin}${url}`;
+
 export interface EmailTemplate {
   id: string;
   name: string;
   description: string;
+  /** Assunto sugerido, já com o nome da marca. */
+  subject: string;
   html: string;
   variables: string[]; // Lista de variáveis suportadas
 }
@@ -15,8 +29,9 @@ export interface EmailTemplate {
  * TEMPLATE 1: Newsletter/Informativo
  * Design moderno com ilustrações e ícones
  */
-const newsletterTemplate: EmailTemplate = {
+const newsletterTemplate = (brand: EmailBrand): EmailTemplate => ({
   id: 'newsletter',
+  subject: `Novidades - ${brand.name}`,
   name: 'Newsletter/Informativo',
   description: 'Template moderno e ilustrado para novidades e comunicados',
   variables: ['nome_cliente', 'titulo', 'conteudo', 'empresa', 'ano_atual'],
@@ -195,7 +210,7 @@ const newsletterTemplate: EmailTemplate = {
   <div class="container">
     <!-- Header com gradiente -->
     <div class="header">
-      <img src="${window.location.origin}/images/logo/instituto-barros-logo-branco.webp" alt="Instituto Barros" class="logo">
+      <img src="${escapeHtml(absoluteUrl(brand.logoDarkUrl))}" alt="${escapeHtml(brand.name)}" class="logo">
       <p class="header-title">{{empresa}}</p>
     </div>
 
@@ -229,7 +244,7 @@ const newsletterTemplate: EmailTemplate = {
     <!-- Footer -->
     <div class="footer">
       <div class="footer-title">{{empresa}}</div>
-      <p class="footer-contact">📧 contato@institutobarros.com.br</p>
+      <p class="footer-contact">📧 ${escapeHtml(brand.supportEmail)}</p>
       <p class="footer-contact">📞 (11) 1234-5678</p>
       <p class="footer-contact">📍 Endereço da clínica, Cidade - Estado</p>
       
@@ -257,14 +272,15 @@ const newsletterTemplate: EmailTemplate = {
 </body>
 </html>
   `.trim()
-};
+});
 
 /**
  * TEMPLATE 2: Promocional/Marketing
  * Design super vibrante com ilustrações e CTAs destacados
  */
-const promocionalTemplate: EmailTemplate = {
+const promocionalTemplate = (brand: EmailBrand): EmailTemplate => ({
   id: 'promocional',
+  subject: `Oferta especial - ${brand.name}`,
   name: 'Promocional/Marketing',
   description: 'Template vibrante e ilustrado para promoções e ofertas especiais',
   variables: ['nome_cliente', 'titulo', 'conteudo', 'cta_texto', 'cta_link', 'empresa', 'ano_atual'],
@@ -545,7 +561,7 @@ const promocionalTemplate: EmailTemplate = {
   <div class="container">
     <!-- Header com animação -->
     <div class="header">
-      <img src="${window.location.origin}/images/logo/instituto-barros-logo-branco.webp" alt="Instituto Barros" class="logo">
+      <img src="${escapeHtml(absoluteUrl(brand.logoDarkUrl))}" alt="${escapeHtml(brand.name)}" class="logo">
       <p class="header-title">{{empresa}}</p>
     </div>
 
@@ -607,7 +623,7 @@ const promocionalTemplate: EmailTemplate = {
     <!-- Footer -->
     <div class="footer">
       <div class="footer-title">{{empresa}}</div>
-      <p class="footer-contact">📧 contato@institutobarros.com.br</p>
+      <p class="footer-contact">📧 ${escapeHtml(brand.supportEmail)}</p>
       <p class="footer-contact">📞 (11) 1234-5678</p>
       <p class="footer-contact">📍 Endereço da clínica, Cidade - Estado</p>
       
@@ -635,14 +651,15 @@ const promocionalTemplate: EmailTemplate = {
 </body>
 </html>
   `.trim()
-};
+});
 
 /**
  * TEMPLATE 3: Transacional/Confirmação
  * Design moderno com ícones e layout limpo
  */
-const transacionalTemplate: EmailTemplate = {
+const transacionalTemplate = (brand: EmailBrand): EmailTemplate => ({
   id: 'transacional',
+  subject: `Informações importantes - ${brand.name}`,
   name: 'Transacional/Confirmação',
   description: 'Template moderno e ilustrado para confirmações e notificações',
   variables: ['nome_cliente', 'titulo', 'conteudo', 'data_atual', 'hora', 'empresa', 'ano_atual'],
@@ -896,7 +913,7 @@ const transacionalTemplate: EmailTemplate = {
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <img src="${window.location.origin}/images/logo/instituto-barros-logo-branco.webp" alt="Instituto Barros" class="logo">
+      <img src="${escapeHtml(absoluteUrl(brand.logoDarkUrl))}" alt="${escapeHtml(brand.name)}" class="logo">
     </div>
 
     <!-- Badge de Sucesso com Animação -->
@@ -965,7 +982,7 @@ const transacionalTemplate: EmailTemplate = {
         </div>
         <div class="contact-item">
           <span>📧</span>
-          <span>contato@institutobarros.com.br</span>
+          <span>${escapeHtml(brand.supportEmail)}</span>
         </div>
         <div class="contact-item">
           <span>📱</span>
@@ -982,7 +999,7 @@ const transacionalTemplate: EmailTemplate = {
     <div class="footer">
       <div class="footer-title">{{empresa}}</div>
       <div class="footer-divider"></div>
-      <p class="footer-contact">📧 contato@institutobarros.com.br</p>
+      <p class="footer-contact">📧 ${escapeHtml(brand.supportEmail)}</p>
       <p class="footer-contact">📞 (11) 1234-5678</p>
       <p class="footer-contact">📍 Endereço da clínica, Cidade - Estado</p>
       
@@ -1010,31 +1027,28 @@ const transacionalTemplate: EmailTemplate = {
 </body>
 </html>
   `.trim()
-};
+});
 
-/**
- * Exporta todos os templates disponíveis
- */
-export const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
+const TEMPLATE_BUILDERS: Record<string, (brand: EmailBrand) => EmailTemplate> = {
   newsletter: newsletterTemplate,
   promocional: promocionalTemplate,
   transacional: transacionalTemplate,
 };
 
 /**
- * Retorna lista de templates para popular dropdown
+ * Retorna a lista de templates para popular dropdown (não depende da marca)
  */
 export const getTemplateList = (): Array<{ value: string; label: string; description: string }> => {
-  return Object.values(EMAIL_TEMPLATES).map(t => ({
-    value: t.id,
-    label: t.name,
-    description: t.description,
-  }));
+  const placeholderBrand: EmailBrand = { name: '', logoDarkUrl: '', supportEmail: '' };
+  return Object.values(TEMPLATE_BUILDERS).map((build) => {
+    const t = build(placeholderBrand);
+    return { value: t.id, label: t.name, description: t.description };
+  });
 };
 
 /**
- * Retorna um template específico pelo ID
+ * Retorna um template específico pelo ID, montado com a marca informada
  */
-export const getTemplateById = (id: string): EmailTemplate | undefined => {
-  return EMAIL_TEMPLATES[id];
+export const getTemplateById = (id: string, brand: EmailBrand): EmailTemplate | undefined => {
+  return TEMPLATE_BUILDERS[id]?.(brand);
 };

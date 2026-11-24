@@ -187,7 +187,7 @@ export default function FormBranchOffice({ data, edit, closeModal }: FormBranchO
               </div>
               <div>
                 <Label>Logradouro<span className="text-red-500">*</span></Label>
-                <Input type="text" placeholder="Rua instituto barros, Jardins" name="rua" value={formData.endereco.rua} onChange={handleChange} required />
+                <Input type="text" placeholder="Rua Exemplo, Centro" name="rua" value={formData.endereco.rua} onChange={handleChange} required />
               </div>
               <div>
                 <Label>Número<span className="text-red-500">*</span></Label>

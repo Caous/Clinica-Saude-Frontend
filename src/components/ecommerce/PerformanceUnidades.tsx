@@ -19,21 +19,21 @@ const defaultUnidades: UnidadePerformance[] = [
     corTexto: "text-[#10B981] dark:text-green-400"
   },
   {
-    nome: "Ipiranga",
+    nome: "Unidade Norte",
     percentual: 25,
     cor: "bg-[#0000fe]",
     corFundo: "bg-blue-50 dark:bg-blue-900/20",
     corTexto: "text-[#0000fe] dark:text-blue-400"
   },
   {
-    nome: "Mooca",
+    nome: "Unidade Sul",
     percentual: 22,
     cor: "bg-[#e3651b]",
     corFundo: "bg-yellow-50 dark:bg-yellow-900/20",
     corTexto: "text-[#e3651b] dark:text-yellow-400"
   },
   {
-    nome: "Bela Vista",
+    nome: "Unidade Centro",
     percentual: 18,
     cor: "bg-[#800000]",
     corFundo: "bg-red-50 dark:bg-red-900/20",

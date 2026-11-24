@@ -234,7 +234,7 @@ export default function CustomerAccessPage() {
   return (
     <>
       <PageMeta
-        title="Instituto Barros - Gerenciar Acessos de Clientes"
+        title="Gerenciar Acessos de Clientes"
         description="Sistema para gerenciar acessos de clientes ao portal"
       />
       <PageBreadcrumb

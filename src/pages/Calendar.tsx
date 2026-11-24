@@ -2067,8 +2067,8 @@ const Calendar: React.FC = () => {
   return (
     <>
       <PageMeta
-        title="Sistema Instituto Barros - Agenda"
-        description="Sistema Instituto Barros - Página para gerenciamento de Agenda"
+        title="Agenda"
+        description="Página para gerenciamento de Agenda"
       />
 
       {/* Header com Título e Botão Novo Evento */}

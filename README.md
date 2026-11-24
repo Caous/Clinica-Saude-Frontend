@@ -1,11 +1,11 @@
-# Instituto Barros — Admin Frontend
+# Sistema Clínica — Intranet (Admin Frontend)
 
 ![React](https://img.shields.io/badge/React-18-61DAFB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF.svg)
 ![Deploy](https://img.shields.io/badge/deploy-Vercel-black.svg)
 
-Painel administrativo da clínica de fisioterapia Instituto Barros. SPA React para gestão de pacientes, funcionários, filiais, agenda, sessões, financeiro, WhatsApp e documentação do sistema.
+Painel administrativo para clínicas. SPA React para gestão de pacientes, funcionários, filiais, agenda, sessões, financeiro, WhatsApp e documentação do sistema.
 
 
 ---
@@ -29,8 +29,9 @@ Painel administrativo da clínica de fisioterapia Instituto Barros. SPA React pa
 ## Executar localmente
 
 ```bash
-git clone https://github.com/InstitutoBarrosTecnologia/frontend_instituto_barros.git
-cd FrontEnd_Instituto_Barros/FrontEnd_Instituto_Barros
+git clone <url-do-repositorio>
+cd <pasta-do-repositorio>
+cp .env.example .env   # ajuste VITE_API_BASE_URL se necessário
 npm install
 npm run dev      # http://localhost:5173
 ```
@@ -46,11 +47,19 @@ npm run preview
 
 ## Variáveis de ambiente
 
-Criar `.env` na raiz (nunca commitar):
+Copiar `.env.example` para `.env` na raiz (nunca commitar o `.env`):
 
 ```env
-VITE_API_URL=https://instituto-barros-sistema.azurewebsites.net
+VITE_API_BASE_URL=http://localhost:5101/api
 ```
+
+- `VITE_API_BASE_URL`: URL base da API, incluindo `/api`. **Obrigatória no build de produção** — sem ela a aplicação falha com erro explícito. Em desenvolvimento, o padrão é `http://localhost:5101/api`.
+
+## Branding (marca configurável)
+
+Nome, logos, favicon, cores e e-mail de suporte vêm de `GET /api/Branding`. Se a API estiver indisponível, a aplicação usa o fallback neutro ("Sistema Clínica") definido em `src/config/branding.ts`. O primeiro frame nunca depende da API.
+
+Guarda anti-marca antiga: `npm run check:brand`.
 
 ---
 
@@ -143,7 +152,7 @@ Usar endpoint `Summary` correspondente (ex: `/GetAllCustomer/Summary`) — nunca
 
 ## CI/CD
 
-Push para `master` → deploy automático na Vercel (`sistema-instituto.vercel.app`).
+Push para `master` → deploy automático na Vercel. Defina `VITE_API_BASE_URL` nas variáveis de ambiente do projeto.
 
 ---
 

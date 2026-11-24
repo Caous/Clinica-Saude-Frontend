@@ -71,3 +71,15 @@ describe("buildCustomerImportCsvTemplate (UT-8)", () => {
     expect(obrigatorios).toContain("CPF");
   });
 });
+
+// AC-4: marca vem por parâmetro; padrão neutro, sem marca de terceiros
+describe("buildCustomerImportCsvTemplate com marca", () => {
+  it("usa o nome da marca informado no título (linha 1)", () => {
+    const csv = buildCustomerImportCsvTemplate("Acme Saúde");
+    expect(csv.replace(/^﻿/, "").split("\r\n")[0]).toContain("Acme Saúde");
+  });
+
+  it("sem parâmetro usa o nome neutro do fallback", () => {
+    expect(buildCustomerImportCsvTemplate()).toContain("Sistema Clínica");
+  });
+});

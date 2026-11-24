@@ -1,3 +1,4 @@
+import { useBranding } from "../../hooks/useBranding";
 import { useState } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
@@ -17,6 +18,7 @@ interface UserMetaCardProps {
 const TOOLTIP_MSG = "Procure o administrativo para alterar as informações cadastradas.";
 
 export default function UserMetaCard({ userData, employeeData }: UserMetaCardProps) {
+  const brand = useBranding();
   const { isOpen, closeModal } = useModal();
   const [activeTooltip, setActiveTooltip] = useState<"personal" | "address" | null>(null);
 
@@ -31,14 +33,9 @@ export default function UserMetaCard({ userData, employeeData }: UserMetaCardPro
           <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
             <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
               <img 
-                className="dark:hidden w-full h-full object-contain p-2" 
-                src="/images/logo/instituto-barros-logo-coluna-cinza.png" 
-                alt="user" 
-              />
-              <img 
-                className="hidden dark:block w-full h-full object-contain p-2" 
-                src="/images/logo/instituto-barros-logo-coluna-branco.png" 
-                alt="user" 
+                className="w-full h-full object-contain p-2" 
+                src="/images/logo/logo-icon.svg" 
+                alt={brand.name} 
               />
             </div>
             <div className="order-3 xl:order-2">
@@ -53,7 +50,7 @@ export default function UserMetaCard({ userData, employeeData }: UserMetaCardPro
                   <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
                 )}
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Instituto Barros
+                  {brand.name}
                 </p>
               </div>
             </div>

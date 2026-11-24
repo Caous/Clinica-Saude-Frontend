@@ -18,11 +18,11 @@ export default function BranchOfficeTables() {
     return (
         <>
             <PageMeta
-                title="Instituto Barros - Sistema"
-                description="Sistema Instituto Barros - Página para gerenciamento de unidades"
+                title="Unidades"
+                description="Página para gerenciamento de unidades"
             />
 
-            <PageBreadcrumb pageTitle="Unidades Instituto Barros" />
+            <PageBreadcrumb pageTitle="Unidades" />
 
             <div className="flex justify-between gap-6 mb-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">

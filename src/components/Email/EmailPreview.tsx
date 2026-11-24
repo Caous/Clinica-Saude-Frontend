@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useBranding } from '../../hooks/useBranding';
 import { replaceVariables, EmailVariables, DEFAULT_VARIABLES } from '../../utils/emailVariables';
 
 interface EmailPreviewProps {
@@ -26,11 +27,13 @@ export default function EmailPreview({
   usingRealData = false
 }: EmailPreviewProps) {
   
+  const brand = useBranding();
+
   // Mescla variáveis fornecidas com defaults e substitui no HTML
   const previewHtml = useMemo(() => {
-    const mergedVars = { ...DEFAULT_VARIABLES, ...variables };
+    const mergedVars = { ...DEFAULT_VARIABLES, empresa: brand.name, ...variables };
     return replaceVariables(htmlContent, mergedVars, true);
-  }, [htmlContent, variables]);
+  }, [htmlContent, variables, brand.name]);
 
   // Verifica se há conteúdo para mostrar
   const hasContent = htmlContent && htmlContent.trim().length > 0;

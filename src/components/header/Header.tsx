@@ -1,3 +1,4 @@
+import { useBranding } from "../../hooks/useBranding";
 import { useState } from "react";
 import { ThemeToggleButton } from "../common/ThemeToggleButton";
 import NotificationDropdown from "./NotificationDropdown";
@@ -10,6 +11,7 @@ interface HeaderProps {
   onToggle: () => void;
 }
 const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
+  const brand = useBranding();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const toggleApplicationMenu = () => {
@@ -81,13 +83,13 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
           <Link to="/" className="lg:hidden">
             <img
               className="dark:hidden"
-              src="./images/logo/instituto-barros-logo-branco.webp"
-              alt="Logo"
+              src={brand.logoLightUrl}
+              alt={brand.name}
             />
             <img
               className="hidden dark:block"
-              src="./images/logo/instituto-barros-logo-branco.webp"
-              alt="Logo"
+              src={brand.logoDarkUrl}
+              alt={brand.name}
             />
           </Link>
 

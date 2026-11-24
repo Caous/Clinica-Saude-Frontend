@@ -162,8 +162,8 @@ export default function Home() {
   return (
     <>
       <PageMeta
-        title="Sistema Instituto Barros"
-        description="Dashboard do Sistema Instituto Barros"
+        title="Dashboard"
+        description="Dashboard do sistema"
       />
       <DashboardFilters variant="financeiro" onChange={setFilters} />
       <TransactionsMetrics filters={{
