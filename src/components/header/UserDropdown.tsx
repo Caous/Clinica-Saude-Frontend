@@ -1,4 +1,5 @@
 import { useBranding } from "../../hooks/useBranding";
+import { useBrandIconUrl } from "../../hooks/useBrandIconUrl";
 import { useEffect, useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
@@ -7,6 +8,7 @@ import { parseJwt } from "../../services/util/jwtUtils";
 
 export default function UserDropdown() {
   const brand = useBranding();
+  const brandIconUrl = useBrandIconUrl();
   const [isOpen, setIsOpen] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string }>({
     email: "",
@@ -42,7 +44,7 @@ export default function UserDropdown() {
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
           <img 
             className="w-full h-full object-contain p-1" 
-            src="/images/logo/logo-icon.svg" 
+            src={brandIconUrl}
             alt={brand.name} 
           />
         </span>

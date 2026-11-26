@@ -31,20 +31,20 @@ describe("BrandingHead: tema em runtime", () => {
   });
 
   it("aplica primaryColor e secondaryColor válidas nas variáveis CSS", async () => {
-    getMock.mockResolvedValue({ data: { primaryColor: "#ff0000", secondaryColor: "#00ff00" } });
+    getMock.mockResolvedValue({ data: { primaryColor: "#cc0000", secondaryColor: "#00ff00" } });
     renderHead();
 
-    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#ff0000"));
+    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#cc0000"));
     expect(root().getPropertyValue("--color-brand-600")).not.toBe("");
     expect(root().getPropertyValue("--color-brand-secondary")).toBe("#00ff00");
-    await waitFor(() => expect(themeColor()?.getAttribute("content")).toBe("#ff0000"));
+    await waitFor(() => expect(themeColor()?.getAttribute("content")).toBe("#cc0000"));
   });
 
   it("troca de cor A para B sobrescreve os tons", async () => {
-    getMock.mockResolvedValue({ data: { primaryColor: "#ff0000" } });
+    getMock.mockResolvedValue({ data: { primaryColor: "#cc0000" } });
     const client = new QueryClient();
     renderHead(client);
-    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#ff0000"));
+    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#cc0000"));
     const tomA = root().getPropertyValue("--color-brand-700");
 
     getMock.mockResolvedValue({ data: { primaryColor: "#0000ff" } });
@@ -55,9 +55,9 @@ describe("BrandingHead: tema em runtime", () => {
   });
 
   it("remove as variáveis no unmount (cleanup)", async () => {
-    getMock.mockResolvedValue({ data: { primaryColor: "#ff0000", secondaryColor: "#00ff00" } });
+    getMock.mockResolvedValue({ data: { primaryColor: "#cc0000", secondaryColor: "#00ff00" } });
     const { unmount } = renderHead();
-    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#ff0000"));
+    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#cc0000"));
 
     unmount();
 

@@ -1,9 +1,11 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { useBrandColors } from "../../../hooks/useBrandColors";
 
 export default function BarChartOne() {
+  const { primary } = useBrandColors();
   const options: ApexOptions = {
-    colors: ["#465fff"],
+    colors: [primary],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",

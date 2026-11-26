@@ -1,4 +1,5 @@
 import { useBranding } from "../hooks/useBranding";
+import { useBrandIconUrl } from "../hooks/useBrandIconUrl";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 
@@ -233,6 +234,7 @@ const allNavItems: NavItem[] = [
 
 const AppSidebar: React.FC = () => {
   const brand = useBranding();
+  const brandIconUrl = useBrandIconUrl();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
 
@@ -488,7 +490,7 @@ const AppSidebar: React.FC = () => {
           ) : (
             <>
               <img
-                src="/images/logo/logo-icon.svg"
+                src={brandIconUrl}
                 alt={brand.name}
                 width={32}
                 height={32}

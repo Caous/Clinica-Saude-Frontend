@@ -12,7 +12,7 @@ interface PerformanceUnidadesProps {
 
 const defaultUnidades: UnidadePerformance[] = [
   {
-    nome: "Marketplace",
+    nome: "Unidade Principal",
     percentual: 35,
     cor: "bg-[#10B981]",
     corFundo: "bg-green-50 dark:bg-green-900/20",

@@ -16,7 +16,7 @@ export default function UnidadesDonutChart() {
       height: 350,
       fontFamily: "Outfit, sans-serif",
     },
-    labels: ["Marketplace", "Unidade Norte", "Unidade Sul", "Unidade Centro"],
+    labels: ["Unidade Principal", "Unidade Norte", "Unidade Sul", "Unidade Centro"],
     colors: ["#3C50E0", "#06B6D4", "#F59E0B", "#EF4444"], // Azul, Ciano, Amarelo, Vermelho
     dataLabels: {
       enabled: true,

@@ -12,4 +12,8 @@ export interface BranchOfficeResponseDto extends BaseResponseDto {
     matriz: boolean;
     idGerenteFilial?: string;
     nomeGerente: string;
+    /** `HH:mm:ss` ou null. */
+    horarioAbertura?: string | null;
+    /** `HH:mm:ss` ou null. */
+    horarioFechamento?: string | null;
 }

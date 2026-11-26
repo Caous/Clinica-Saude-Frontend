@@ -11,6 +11,7 @@ import Select from "../../../components/form/Select";
 import InputMask from "react-input-mask";
 import EmployeeService from "../../../services/service/EmployeeService";
 import { useCepLookup } from "../../../hooks/useCepLookup";
+import { isOpeningBeforeClosing, toApiTime, toTimeInputValue } from "../../../utils/branchOfficeHours";
 
 interface FormBranchOfficeProps {
   data?: BranchOfficeRequestDto;
@@ -34,6 +35,8 @@ export default function FormBranchOffice({ data, edit, closeModal }: FormBranchO
     },
     matriz: data?.matriz ?? false,
     idGerenteFilial: data?.idGerenteFilial ?? undefined,
+    horarioAbertura: data?.horarioAbertura ?? null,
+    horarioFechamento: data?.horarioFechamento ?? null,
     dataCadastro: data?.dataCadastro ?? new Date().toISOString(),
   });
 
@@ -94,6 +97,10 @@ export default function FormBranchOffice({ data, edit, closeModal }: FormBranchO
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isOpeningBeforeClosing(formData.horarioAbertura, formData.horarioFechamento)) {
+      toast.error("O horário de abertura deve ser anterior ao de fechamento.");
+      return;
+    }
     mutation.mutate(formData);
   };
 
@@ -221,6 +228,28 @@ export default function FormBranchOffice({ data, edit, closeModal }: FormBranchO
                   }
                   className="dark:bg-dark-900"
                 />
+              </div>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                <div>
+                  <Label>Horário de abertura</Label>
+                  <Input
+                    type="time"
+                    name="horarioAbertura"
+                    value={toTimeInputValue(formData.horarioAbertura)}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, horarioAbertura: toApiTime(e.target.value) }))}
+                    hint="Vazio: a agenda usa 08:00."
+                  />
+                </div>
+                <div>
+                  <Label>Horário de fechamento</Label>
+                  <Input
+                    type="time"
+                    name="horarioFechamento"
+                    value={toTimeInputValue(formData.horarioFechamento)}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, horarioFechamento: toApiTime(e.target.value) }))}
+                    hint="Vazio: a agenda usa 22:00."
+                  />
+                </div>
               </div>
               <div>
                 <Label>Observação</Label>

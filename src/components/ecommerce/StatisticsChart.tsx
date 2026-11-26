@@ -1,6 +1,7 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import ChartTab from "../common/ChartTab";
+import { useBrandColors } from "../../hooks/useBrandColors";
 
 interface SeriesData {
   name: string;
@@ -21,13 +22,14 @@ export default function StatisticsChart({
   loading = false,
   error = null
 }: StatisticsChartProps) {
+  const { primary, secondary } = useBrandColors();
   const options: ApexOptions = {
     legend: {
       show: false, // Hide legend
       position: "top",
       horizontalAlign: "left",
     },
-    colors: ["#465FFF", "#9CB9FF"], // Define line colors
+    colors: [primary, secondary], // Cores da marca: série principal e secundária
     chart: {
       fontFamily: "Outfit, sans-serif",
       height: 310,
