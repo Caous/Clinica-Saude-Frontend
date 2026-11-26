@@ -1,4 +1,5 @@
 import { useBranding } from "../../hooks/useBranding";
+import { useBrandIconUrl } from "../../hooks/useBrandIconUrl";
 import { useState } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
@@ -19,6 +20,7 @@ const TOOLTIP_MSG = "Procure o administrativo para alterar as informações cada
 
 export default function UserMetaCard({ userData, employeeData }: UserMetaCardProps) {
   const brand = useBranding();
+  const brandIconUrl = useBrandIconUrl();
   const { isOpen, closeModal } = useModal();
   const [activeTooltip, setActiveTooltip] = useState<"personal" | "address" | null>(null);
 
@@ -34,7 +36,7 @@ export default function UserMetaCard({ userData, employeeData }: UserMetaCardPro
             <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
               <img 
                 className="w-full h-full object-contain p-2" 
-                src="/images/logo/logo-icon.svg" 
+                src={brandIconUrl}
                 alt={brand.name} 
               />
             </div>

@@ -5,6 +5,7 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
 import { DashboardTopServicesResponse } from "../../services/model/dashboard.types";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface ServicosPieChartProps {
   data?: DashboardTopServicesResponse[];
@@ -19,11 +20,12 @@ export default function ServicosPieChart({ data, loading = false }: ServicosPieC
   
   const series = chartData.map(item => item.total);
   const labels = chartData.map(item => item.servico);
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "pie",
       height: 350,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
     labels: labels,
     colors: ["#3C50E0", "#06B6D4", "#8B5CF6", "#F59E0B", "#EF4444", "#10B981"], // Azul, Ciano, Roxo, Amarelo, Vermelho, Verde
@@ -50,7 +52,7 @@ export default function ServicosPieChart({ data, loading = false }: ServicosPieC
     legend: {
       position: "bottom",
       horizontalAlign: "center",
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       fontSize: "13px",
       markers: {
         size: 4,
@@ -96,7 +98,7 @@ export default function ServicosPieChart({ data, loading = false }: ServicosPieC
             color: #ffffff; 
             border-radius: 6px; 
             font-size: 14px; 
-            font-family: Outfit, sans-serif;
+            font-family: ${brandFont};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             border: 1px solid #1a1a1a;
           ">

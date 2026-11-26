@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 
 import { BranchOfficeResponseDto } from "../../../services/model/Dto/Response/BranchOfficeResponseDto";
 import FormBranchOffice from "../../../pages/Forms/BranchOffice/FormBranchOffice";
+import { formatBranchHours } from "../../../utils/branchOfficeHours";
 import { BranchOfficeService } from "../../../services/service/BranchOfficeService";
 import EmployeeService from "../../../services/service/EmployeeService";
 import Button from "../../ui/button/Button";
@@ -220,6 +221,12 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
                   isHeader
                   className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
                 >
+                  Horário
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="px-5 py-3 text-start text-theme-xs font-medium text-gray-500 dark:text-gray-400"
+                >
                   Observação
                 </TableCell>
                 {canManageDeleted && <DesativacaoHeaderCells />}
@@ -252,6 +259,9 @@ export default function BranchOfficeGrid({ searchTerm = "" }: BranchOfficeGridPr
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                       {getGerenteName(branch.idGerenteFilial)}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                      {formatBranchHours(branch.horarioAbertura, branch.horarioFechamento)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
                       {branch.observacao}

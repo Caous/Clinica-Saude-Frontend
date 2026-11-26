@@ -5,6 +5,7 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
 import { DashboardUnitDistributionResponse } from "../../services/model/dashboard.types";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface UnidadesPieChartProps {
   data?: DashboardUnitDistributionResponse[];
@@ -19,11 +20,12 @@ export default function UnidadesPieChart({ data, loading = false }: UnidadesPieC
   
   const series = chartData.map(item => item.total);
   const labels = chartData.map(item => item.unidade);
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "pie",
       height: 350,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
     labels: labels,
     colors: ["#3C50E0", "#06B6D4", "#F59E0B", "#EF4444"], // Azul, Ciano, Amarelo, Vermelho (cores originais ApexCharts)
@@ -49,7 +51,7 @@ export default function UnidadesPieChart({ data, loading = false }: UnidadesPieC
     legend: {
       position: "bottom",
       horizontalAlign: "center",
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       fontSize: "14px",
       markers: {
         size: 4,
@@ -90,7 +92,7 @@ export default function UnidadesPieChart({ data, loading = false }: UnidadesPieC
             color: #ffffff; 
             border-radius: 6px; 
             font-size: 14px; 
-            font-family: Outfit, sans-serif;
+            font-family: ${brandFont};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             border: 1px solid #1a1a1a;
           ">

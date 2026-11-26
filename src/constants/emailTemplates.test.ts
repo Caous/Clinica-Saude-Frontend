@@ -54,3 +54,78 @@ describe("templates de e-mail com marca configurável (UT-5)", () => {
     expect(getTemplateList().map((t) => t.value)).toEqual(TEMPLATE_IDS);
   });
 });
+
+describe("card Precisa de ajuda? do transacional", () => {
+  it("com phone mostra o item 📱 com o telefone escapado", () => {
+    const html = getTemplateById("transacional", { ...ACME, phone: "1<b>" })!.html;
+    expect(html).toContain("Precisa de ajuda?");
+    expect(html).toContain("<span>📱</span>");
+    expect(html).toContain("<span>1&lt;b&gt;</span>");
+    expect(html).not.toContain("<span>1<b></span>");
+  });
+
+  it("sem phone não renderiza o item 📱", () => {
+    const html = getTemplateById("transacional", { ...ACME, phone: "" })!.html;
+    expect(html).toContain("Precisa de ajuda?");
+    expect(html).not.toContain("📱");
+  });
+});
+
+describe("rodapé de e-mail com telefone e endereço do branding (UT-7, UT-8)", () => {
+  const FAKE_PHONE = "(11) 1234" + "-5678";
+  const FAKE_WHATSAPP = "(11) 98765" + "-4321";
+  const PLACEHOLDER_ADDRESS = "Endereço da " + "clínica";
+
+  it.each(TEMPLATE_IDS)("%s: sem phone/address omite as linhas e não traz placeholders", (id) => {
+    const html = getTemplateById(id, { ...ACME, phone: "", address: "" })!.html;
+
+    expect(html).not.toContain(FAKE_PHONE);
+    expect(html).not.toContain(FAKE_WHATSAPP);
+    expect(html).not.toContain(PLACEHOLDER_ADDRESS);
+    // "📞" só pode restar no título fixo do card de ajuda do transacional.
+    const withoutHelpCardTitle = html.replace("<span>📞</span>", "");
+    expect(withoutHelpCardTitle).not.toContain("📞");
+    expect(html).not.toContain('footer-contact">📍');
+  });
+
+  it.each(TEMPLATE_IDS)("%s: brand sem os campos opcionais também omite", (id) => {
+    const html = getTemplateById(id, ACME)!.html;
+    expect(html).not.toContain(FAKE_PHONE);
+    expect(html).not.toContain('footer-contact">📍');
+  });
+
+  it.each(TEMPLATE_IDS)("%s: com phone/address mostra as linhas", (id) => {
+    const html = getTemplateById(id, { ...ACME, phone: "(11) 4000-0000", address: "Rua Exemplo, 100" })!.html;
+
+    expect(html).toContain("📞 (11) 4000-0000");
+    expect(html).toContain("📍 Rua Exemplo, 100");
+  });
+
+  it.each(TEMPLATE_IDS)("%s: escapa HTML em phone e address", (id) => {
+    const html = getTemplateById(id, { ...ACME, phone: "1<b>", address: "A & B <i>" })!.html;
+
+    expect(html).toContain("📞 1&lt;b&gt;");
+    expect(html).toContain("📍 A &amp; B &lt;i&gt;");
+  });
+});
+
+describe("logo e fonte dos templates (UT-11, AC-5)", () => {
+  const PNG_BRAND = { ...ACME, logoDarkUrl: "/images/brand/cuidaflux/logo-horizontal-escuro.png" };
+
+  it.each(TEMPLATE_IDS)("%s: cabeçalho usa o logo .png do Branding com URL absoluta (caminho relativo)", (id) => {
+    const html = getTemplateById(id, PNG_BRAND)!.html;
+    expect(html).toContain(`<img src="${window.location.origin}/images/brand/cuidaflux/logo-horizontal-escuro.png"`);
+  });
+
+  it.each(TEMPLATE_IDS)("%s: URL absoluta do logo é mantida", (id) => {
+    const html = getTemplateById(id, { ...ACME, logoDarkUrl: "https://cdn.example.com/logo.png" })!.html;
+    expect(html).toContain('<img src="https://cdn.example.com/logo.png"');
+  });
+
+  it.each(TEMPLATE_IDS)("%s: não depende de web font (fonte de sistema)", (id) => {
+    const html = getTemplateById(id, PNG_BRAND)!.html;
+    expect(html).not.toMatch(/@font-face/i);
+    expect(html).not.toMatch(/@import\s+url/i);
+    expect(html).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/i);
+  });
+});

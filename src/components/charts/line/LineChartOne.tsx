@@ -1,16 +1,20 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { useBrandColors } from "../../../hooks/useBrandColors";
+import { useBrandFont } from "../../../hooks/useBrandFont";
 
 export default function LineChartOne() {
+  const { primary, secondary } = useBrandColors();
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     legend: {
       show: false, // Hide legend
       position: "top",
       horizontalAlign: "left",
     },
-    colors: ["#465FFF", "#9CB9FF"], // Define line colors
+    colors: [primary, secondary], // Cores da marca: série principal e secundária
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       height: 310,
       type: "line", // Set the chart type to 'line'
       toolbar: {

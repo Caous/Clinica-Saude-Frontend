@@ -4,19 +4,21 @@ import { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 export default function UnidadesDonutChart() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Dados das unidades
   const series = [35, 25, 22, 18]; // Percentuais de cada unidade
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "donut",
       height: 350,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
-    labels: ["Marketplace", "Unidade Norte", "Unidade Sul", "Unidade Centro"],
+    labels: ["Unidade Principal", "Unidade Norte", "Unidade Sul", "Unidade Centro"],
     colors: ["#3C50E0", "#06B6D4", "#F59E0B", "#EF4444"], // Azul, Ciano, Amarelo, Vermelho
     dataLabels: {
       enabled: true,
@@ -31,7 +33,7 @@ export default function UnidadesDonutChart() {
     legend: {
       position: "bottom",
       horizontalAlign: "center",
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       fontSize: "14px",
       markers: {
         size: 4,

@@ -5,6 +5,7 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
 import { DashboardPhysiotherapistSessionsResponse } from "../../services/model/dashboard.types";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface FisioterapeutasBarChartProps {
   data?: DashboardPhysiotherapistSessionsResponse[];
@@ -29,10 +30,11 @@ export default function FisioterapeutasBarChart({
 
   const categories = chartData.map((item) => item.fisioterapeuta);
 
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     colors: ["#3C50E0"], // Azul padrão para as barras
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       type: "bar",
       height: 350,
       toolbar: {

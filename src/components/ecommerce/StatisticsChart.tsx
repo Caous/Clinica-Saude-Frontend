@@ -1,6 +1,8 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import ChartTab from "../common/ChartTab";
+import { useBrandColors } from "../../hooks/useBrandColors";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface SeriesData {
   name: string;
@@ -21,15 +23,17 @@ export default function StatisticsChart({
   loading = false,
   error = null
 }: StatisticsChartProps) {
+  const { primary, secondary } = useBrandColors();
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     legend: {
       show: false, // Hide legend
       position: "top",
       horizontalAlign: "left",
     },
-    colors: ["#465FFF", "#9CB9FF"], // Define line colors
+    colors: [primary, secondary], // Cores da marca: série principal e secundária
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       height: 310,
       type: "line", // Set the chart type to 'line'
       toolbar: {
@@ -95,7 +99,7 @@ export default function StatisticsChart({
             color: #ffffff; 
             border-radius: 6px; 
             font-size: 14px; 
-            font-family: Outfit, sans-serif;
+            font-family: ${brandFont};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             position: relative;
             z-index: 999;

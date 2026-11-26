@@ -31,20 +31,20 @@ describe("BrandingHead: tema em runtime", () => {
   });
 
   it("aplica primaryColor e secondaryColor válidas nas variáveis CSS", async () => {
-    getMock.mockResolvedValue({ data: { primaryColor: "#ff0000", secondaryColor: "#00ff00" } });
+    getMock.mockResolvedValue({ data: { primaryColor: "#cc0000", secondaryColor: "#00ff00" } });
     renderHead();
 
-    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#ff0000"));
+    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#cc0000"));
     expect(root().getPropertyValue("--color-brand-600")).not.toBe("");
     expect(root().getPropertyValue("--color-brand-secondary")).toBe("#00ff00");
-    await waitFor(() => expect(themeColor()?.getAttribute("content")).toBe("#ff0000"));
+    await waitFor(() => expect(themeColor()?.getAttribute("content")).toBe("#cc0000"));
   });
 
   it("troca de cor A para B sobrescreve os tons", async () => {
-    getMock.mockResolvedValue({ data: { primaryColor: "#ff0000" } });
+    getMock.mockResolvedValue({ data: { primaryColor: "#cc0000" } });
     const client = new QueryClient();
     renderHead(client);
-    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#ff0000"));
+    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#cc0000"));
     const tomA = root().getPropertyValue("--color-brand-700");
 
     getMock.mockResolvedValue({ data: { primaryColor: "#0000ff" } });
@@ -55,9 +55,9 @@ describe("BrandingHead: tema em runtime", () => {
   });
 
   it("remove as variáveis no unmount (cleanup)", async () => {
-    getMock.mockResolvedValue({ data: { primaryColor: "#ff0000", secondaryColor: "#00ff00" } });
+    getMock.mockResolvedValue({ data: { primaryColor: "#cc0000", secondaryColor: "#00ff00" } });
     const { unmount } = renderHead();
-    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#ff0000"));
+    await waitFor(() => expect(root().getPropertyValue("--color-brand-500")).toBe("#cc0000"));
 
     unmount();
 
@@ -93,5 +93,88 @@ describe("BrandingHead: tema em runtime", () => {
       expect(document.head.querySelector('link[rel="icon"]')?.getAttribute("href")).toBe("/acme.ico")
     );
     expect(document.head.querySelectorAll('link[rel="icon"]')).toHaveLength(1);
+  });
+});
+
+describe("BrandingHead: fonte da marca (UT-6, UT-7, UT-10)", () => {
+  const fontLinks = () => document.head.querySelectorAll('link[rel="stylesheet"][data-brand-font]');
+  const FONT_URL = "https://fonts.googleapis.com/css2?family=Inter&display=swap";
+
+  beforeEach(() => {
+    getMock.mockReset();
+  });
+  afterEach(() => {
+    root().removeProperty("--font-brand");
+    root().removeProperty("--font-brand-heading");
+    fontLinks().forEach((link) => link.remove());
+  });
+
+  it("define --font-brand e --font-brand-heading (heading vazio usa fontFamily)", async () => {
+    getMock.mockResolvedValue({ data: { fontFamily: "Inter" } });
+    renderHead();
+
+    await waitFor(() => expect(root().getPropertyValue("--font-brand")).toBe("Inter, system-ui, sans-serif"));
+    expect(root().getPropertyValue("--font-brand-heading")).toBe("Inter, system-ui, sans-serif");
+  });
+
+  it("usa fontHeadingFamily nos títulos", async () => {
+    getMock.mockResolvedValue({ data: { fontFamily: "Inter", fontHeadingFamily: "Lora" } });
+    renderHead();
+
+    await waitFor(() => expect(root().getPropertyValue("--font-brand-heading")).toBe("Lora, system-ui, sans-serif"));
+  });
+
+  it("só fontHeadingFamily: define apenas --font-brand-heading", async () => {
+    getMock.mockResolvedValue({ data: { fontHeadingFamily: "Lora" } });
+    renderHead();
+
+    await waitFor(() => expect(root().getPropertyValue("--font-brand-heading")).toBe("Lora, system-ui, sans-serif"));
+    expect(root().getPropertyValue("--font-brand")).toBe("");
+  });
+
+  it("ambas vazias: não define nenhuma variável de fonte", async () => {
+    getMock.mockResolvedValue({ data: { fontFamily: "", fontHeadingFamily: "" } });
+    renderHead();
+
+    await waitFor(() => expect(getMock).toHaveBeenCalled());
+    expect(root().getPropertyValue("--font-brand")).toBe("");
+    expect(root().getPropertyValue("--font-brand-heading")).toBe("");
+  });
+
+  it("injeta um único link da fonte, sem duplicar ao rerenderizar", async () => {
+    getMock.mockResolvedValue({ data: { fontFamily: "Inter", fontUrl: FONT_URL } });
+    const view = renderHead();
+
+    await waitFor(() => expect(fontLinks()).toHaveLength(1));
+    expect(fontLinks()[0].getAttribute("href")).toBe(FONT_URL);
+    view.rerender(
+      <HelmetProvider>
+        <QueryClientProvider client={new QueryClient()}>
+          <BrandingHead />
+        </QueryClientProvider>
+      </HelmetProvider>
+    );
+    expect(fontLinks()).toHaveLength(1);
+  });
+
+  it("remove o link e as variáveis ao desmontar", async () => {
+    getMock.mockResolvedValue({ data: { fontFamily: "Inter", fontUrl: FONT_URL } });
+    const { unmount } = renderHead();
+    await waitFor(() => expect(fontLinks()).toHaveLength(1));
+
+    unmount();
+
+    expect(fontLinks()).toHaveLength(0);
+    expect(root().getPropertyValue("--font-brand")).toBe("");
+  });
+
+  it("sem fontUrl não injeta link; sem fontFamily não define variáveis", async () => {
+    getMock.mockResolvedValue({ data: { name: "X" } });
+    renderHead();
+
+    await waitFor(() => expect(getMock).toHaveBeenCalled());
+    expect(fontLinks()).toHaveLength(0);
+    expect(root().getPropertyValue("--font-brand")).toBe("");
+    expect(root().getPropertyValue("--font-brand-heading")).toBe("");
   });
 });

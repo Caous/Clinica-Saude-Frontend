@@ -1,5 +1,6 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface FisioVsPlanoBarChartProps {
   data?: Record<string, Record<string, number>>;
@@ -33,10 +34,11 @@ export default function FisioVsPlanoBarChart({
     },
   ];
 
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     colors: ["#3C50E0", "#10B981"],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       type: "bar",
       height: 350,
       toolbar: { show: false },
@@ -67,7 +69,7 @@ export default function FisioVsPlanoBarChart({
     legend: {
       position: "top",
       horizontalAlign: "left",
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       fontSize: "13px",
     },
     tooltip: {

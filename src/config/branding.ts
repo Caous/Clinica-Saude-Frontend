@@ -8,10 +8,27 @@ export interface Branding {
   shortName: string;
   logoLightUrl: string;
   logoDarkUrl: string;
+  /** Ícone quadrado (avatar, sidebar recolhida). */
+  logoIconUrl: string;
+  /** Ícone do tema escuro; vazio = usar `logoIconUrl`. */
+  logoIconDarkUrl: string;
   faviconUrl: string;
   primaryColor: string;
   secondaryColor: string;
   supportEmail: string;
+  /** Telefone exibido no rodapé de e-mail; vazio = omitido. */
+  phone: string;
+  /** Endereço exibido no rodapé de e-mail; vazio = omitido. */
+  address: string;
+  /** Família da fonte da marca (texto corrido); vazio = fonte atual do front. */
+  fontFamily: string;
+  /**
+   * Família dos títulos; vazio = usar `fontFamily`. Configurada sozinha (sem `fontFamily`),
+   * define apenas `--font-brand-heading`; com ambas vazias nenhuma variável de fonte é definida.
+   */
+  fontHeadingFamily: string;
+  /** CSS da fonte (relativa ou https); vazio = nada a carregar. */
+  fontUrl: string;
 }
 
 export const FALLBACK_BRANDING: Readonly<Branding> = Object.freeze({
@@ -19,10 +36,17 @@ export const FALLBACK_BRANDING: Readonly<Branding> = Object.freeze({
   shortName: "Clínica",
   logoLightUrl: "/images/logo/logo.svg",
   logoDarkUrl: "/images/logo/logo-dark.svg",
+  logoIconUrl: "/images/logo/logo-icon.svg",
+  logoIconDarkUrl: "",
   faviconUrl: "/favicon.ico",
   primaryColor: "#465fff",
   secondaryColor: "#101828",
   supportEmail: "suporte@example.com",
+  phone: "",
+  address: "",
+  fontFamily: "",
+  fontHeadingFamily: "",
+  fontUrl: "",
 });
 
 const BRANDING_KEYS = Object.keys(FALLBACK_BRANDING) as ReadonlyArray<keyof Branding>;
@@ -32,14 +56,61 @@ const SAFE_URL = /^(?:\/(?![\/\\])[^\s\\"'<>]*|https:\/\/[^\s\\"'<>]+)$/;
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const EMAIL = /^[^\s@"'<>]+@[^\s@"'<>]+\.[^\s@"'<>]+$/;
 
+const FONT_FAMILY = /^[A-Za-z0-9 ,-]{1,100}$/;
+const FREE_TEXT = /^[^<>]{1,200}$/;
+const MIN_PRIMARY_CONTRAST = 4.5;
+
 const FIELD_VALIDATORS: Partial<Record<keyof Branding, RegExp>> = {
   logoLightUrl: SAFE_URL,
   logoDarkUrl: SAFE_URL,
+  logoIconUrl: SAFE_URL,
+  logoIconDarkUrl: SAFE_URL,
   faviconUrl: SAFE_URL,
   primaryColor: HEX_COLOR,
   secondaryColor: HEX_COLOR,
   supportEmail: EMAIL,
+  phone: FREE_TEXT,
+  address: FREE_TEXT,
+  fontFamily: FONT_FAMILY,
+  fontHeadingFamily: FONT_FAMILY,
+  fontUrl: SAFE_URL,
 };
+
+/** Campos opcionais: inválido vira vazio (não herda o fallback, que também é vazio). */
+const OPTIONAL_TEXT_KEYS: ReadonlyArray<keyof Branding> = [
+  "phone",
+  "address",
+  "fontFamily",
+  "fontHeadingFamily",
+  "fontUrl",
+];
+
+function parseHexChannels(hexColor: string): [number, number, number] | null {
+  const digits = hexColor.replace(/^#/, "");
+  if (!/^[0-9a-fA-F]+$/.test(digits) || ![3, 4, 6, 8].includes(digits.length)) return null;
+  const expanded = digits.length <= 4 ? [...digits].map((c) => c + c).join("") : digits;
+  return [0, 2, 4].map((i) => parseInt(expanded.slice(i, i + 2), 16)) as [number, number, number];
+}
+
+/**
+ * Razão de contraste WCAG 2.x entre a cor e o branco (1 a 21). Alfa ignorado.
+ * Retorna null para hex inválido. Função pura.
+ */
+export function contrastWithWhite(hexColor: string): number | null {
+  const channels = parseHexChannels(hexColor);
+  if (!channels) return null;
+  const [red, green, blue] = channels.map((channel) => {
+    const srgb = channel / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4);
+  });
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  return 1.05 / (luminance + 0.05);
+}
+
+/** Ícone do tema ativo: no escuro usa `logoIconDarkUrl`, com fallback para `logoIconUrl`. Função pura. */
+export function resolveBrandIconUrl(brand: Pick<Branding, "logoIconUrl" | "logoIconDarkUrl">, theme: "light" | "dark"): string {
+  return theme === "dark" && brand.logoIconDarkUrl !== "" ? brand.logoIconDarkUrl : brand.logoIconUrl;
+}
 
 /**
  * Converte a resposta (não confiável) da API em um `Branding` completo.
@@ -59,7 +130,11 @@ export function resolveBranding(response: unknown, fallback: Readonly<Branding>)
     const trimmed = value.trim();
     if (trimmed === "") continue;
     const validator = FIELD_VALIDATORS[key];
-    if (validator && !validator.test(trimmed)) continue;
+    if (validator && !validator.test(trimmed)) {
+      if (OPTIONAL_TEXT_KEYS.includes(key)) resolved[key] = "";
+      continue;
+    }
+    if (key === "primaryColor" && (contrastWithWhite(trimmed) ?? 0) < MIN_PRIMARY_CONTRAST) continue;
     resolved[key] = trimmed;
   }
 
@@ -92,11 +167,8 @@ const toHexByte = (n: number): string => Math.round(n).toString(16).padStart(2, 
  * Retorna null para tamanhos não suportados. Função pura.
  */
 export function deriveBrandShades(hexColor: string): BrandShades | null {
-  const digits = hexColor.replace(/^#/, "");
-  if (!/^[0-9a-fA-F]+$/.test(digits) || ![3, 4, 6, 8].includes(digits.length)) return null;
-
-  const expanded = digits.length <= 4 ? [...digits].map((c) => c + c).join("") : digits;
-  const channels = [0, 2, 4].map((i) => parseInt(expanded.slice(i, i + 2), 16));
+  const channels = parseHexChannels(hexColor);
+  if (!channels) return null;
 
   const shades = {} as BrandShades;
   for (const key of BRAND_SHADE_KEYS) {

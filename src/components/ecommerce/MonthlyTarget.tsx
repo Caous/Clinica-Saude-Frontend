@@ -4,13 +4,17 @@ import { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
+import { useBrandColors } from "../../hooks/useBrandColors";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 export default function MonthlyTarget() {
+  const { primary } = useBrandColors();
   const series = [75.55];
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
-    colors: ["#465FFF"],
+    colors: [primary],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       type: "radialBar",
       height: 330,
       sparkline: {
@@ -47,7 +51,7 @@ export default function MonthlyTarget() {
     },
     fill: {
       type: "solid",
-      colors: ["#465FFF"],
+      colors: [primary],
     },
     stroke: {
       lineCap: "round",

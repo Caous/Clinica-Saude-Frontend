@@ -4,17 +4,19 @@ import { useState } from "react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 export default function FisioterapeutasPieChart() {
   const [isOpen, setIsOpen] = useState(false);
 
   // Dados dos fisioterapeutas - sessões realizadas no mês
   const series = [89, 76, 65, 58, 42]; // Quantidade de sessões por fisioterapeuta
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "pie",
       height: 350,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
     labels: ["Dr. Ana Silva", "Dr. Carlos Santos", "Dra. Maria Oliveira", "Dr. João Costa", "Dra. Lucia Ferreira"],
     colors: ["#3C50E0", "#06B6D4", "#8B5CF6", "#F59E0B", "#EF4444"], // Azul, Ciano, Roxo, Amarelo, Vermelho
@@ -35,7 +37,7 @@ export default function FisioterapeutasPieChart() {
     legend: {
       position: "bottom",
       horizontalAlign: "center",
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       fontSize: "14px",
       markers: {
         size: 4,

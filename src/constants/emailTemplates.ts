@@ -6,10 +6,15 @@
 import type { Branding } from '../config/branding';
 
 /** Dados de marca necessários para montar os templates. */
-export type EmailBrand = Pick<Branding, 'name' | 'logoDarkUrl' | 'supportEmail'>;
+export type EmailBrand = Pick<Branding, 'name' | 'logoDarkUrl' | 'supportEmail'> &
+  Partial<Pick<Branding, 'phone' | 'address'>>;
 
 const escapeHtml = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Linha de contato do rodapé; vazia (omitida) quando não há valor configurado. */
+const footerLine = (icon: string, value: string | undefined): string =>
+  value ? `<p class="footer-contact">${icon} ${escapeHtml(value)}</p>` : '';
 
 /** Logo relativo vira absoluto (clientes de e-mail não resolvem caminhos relativos). */
 const absoluteUrl = (url: string): string =>
@@ -245,8 +250,8 @@ const newsletterTemplate = (brand: EmailBrand): EmailTemplate => ({
     <div class="footer">
       <div class="footer-title">{{empresa}}</div>
       <p class="footer-contact">📧 ${escapeHtml(brand.supportEmail)}</p>
-      <p class="footer-contact">📞 (11) 1234-5678</p>
-      <p class="footer-contact">📍 Endereço da clínica, Cidade - Estado</p>
+      ${footerLine('📞', brand.phone)}
+      ${footerLine('📍', brand.address)}
       
       <div class="footer-icons">
         <a href="#" class="social-icon">
@@ -624,8 +629,8 @@ const promocionalTemplate = (brand: EmailBrand): EmailTemplate => ({
     <div class="footer">
       <div class="footer-title">{{empresa}}</div>
       <p class="footer-contact">📧 ${escapeHtml(brand.supportEmail)}</p>
-      <p class="footer-contact">📞 (11) 1234-5678</p>
-      <p class="footer-contact">📍 Endereço da clínica, Cidade - Estado</p>
+      ${footerLine('📞', brand.phone)}
+      ${footerLine('📍', brand.address)}
       
       <div class="social-links">
         <a href="#" class="social-btn">
@@ -984,14 +989,10 @@ const transacionalTemplate = (brand: EmailBrand): EmailTemplate => ({
           <span>📧</span>
           <span>${escapeHtml(brand.supportEmail)}</span>
         </div>
-        <div class="contact-item">
+        ${brand.phone ? `<div class="contact-item">
           <span>📱</span>
-          <span>(11) 1234-5678</span>
-        </div>
-        <div class="contact-item">
-          <span>💬</span>
-          <span>WhatsApp: (11) 98765-4321</span>
-        </div>
+          <span>${escapeHtml(brand.phone)}</span>
+        </div>` : ''}
       </div>
     </div>
 
@@ -1000,8 +1001,8 @@ const transacionalTemplate = (brand: EmailBrand): EmailTemplate => ({
       <div class="footer-title">{{empresa}}</div>
       <div class="footer-divider"></div>
       <p class="footer-contact">📧 ${escapeHtml(brand.supportEmail)}</p>
-      <p class="footer-contact">📞 (11) 1234-5678</p>
-      <p class="footer-contact">📍 Endereço da clínica, Cidade - Estado</p>
+      ${footerLine('📞', brand.phone)}
+      ${footerLine('📍', brand.address)}
       
       <div class="social-row">
         <a href="#" class="social-icon">

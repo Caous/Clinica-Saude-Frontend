@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -60,6 +60,7 @@ import {
 } from "../components/helper/formatUtils";
 import FormSession from "./Forms/OrderServiceForms/FormSession";
 import FormCustomer from "./Forms/Customer/FormCustomer";
+import { computeCalendarSlotLimits } from "../utils/branchOfficeHours";
 import {
   calculateRecurrenceDates,
   getDefaultStartFrom,
@@ -280,9 +281,6 @@ const Calendar: React.FC = () => {
     }),
   );
 
-  // Estados para horários de funcionamento por filial
-  const [slotMinTime, setSlotMinTime] = useState<string>("06:00:00");
-  const [slotMaxTime, setSlotMaxTime] = useState<string>("22:00:00");
 
   // Função para mapear status para ícones
   const getStatusIcon = (status: number): string => {
@@ -1062,43 +1060,11 @@ const Calendar: React.FC = () => {
     }
   }, [isErrorFuncionarios]);
 
-  // useEffect para atualizar horários de funcionamento baseado na filial selecionada
-  useEffect(() => {
-    if (!selectedFilial || selectedFilial === "") {
-      // Quando nenhuma filial está selecionada, usa horário mais amplo (MARKETPLACE)
-      setSlotMinTime("06:00:00");
-      setSlotMaxTime("23:00:00");
-    } else {
-      // Busca o nome da filial selecionada
-      const filial = filiaisData?.find((f: any) => f.id === selectedFilial);
-      const nomeFilial = filial?.nomeFilial?.toUpperCase() || "";
-
-      // Define horários baseado no nome da filial
-      if (nomeFilial.includes("MARKETPLACE")) {
-        setSlotMinTime("06:00:00");
-        setSlotMaxTime("23:00:00");
-      } else if (nomeFilial.includes("PAULISTA")) {
-        setSlotMinTime("08:00:00");
-        setSlotMaxTime("22:00:00");
-      } else if (nomeFilial.includes("MOOCA")) {
-        setSlotMinTime("08:00:00");
-        setSlotMaxTime("22:00:00");
-      } else if (nomeFilial.includes("IPIRANGA")) {
-        setSlotMinTime("07:00:00");
-        setSlotMaxTime("22:00:00");
-      } else if (nomeFilial.includes("PAZ")) {
-        setSlotMinTime("08:00:00");
-        setSlotMaxTime("22:00:00");
-      } else if (nomeFilial.includes("ALPHAVILLE")) {
-        setSlotMinTime("08:00:00");
-        setSlotMaxTime("22:00:00");
-      } else {
-        // Horário padrão para outras filiais não mapeadas
-        setSlotMinTime("08:00:00");
-        setSlotMaxTime("22:00:00");
-      }
-    }
-  }, [selectedFilial, filiaisData]);
+  // Limites da agenda derivados dos horários cadastrados nas filiais (sem lógica por nome de unidade).
+  const { slotMinTime, slotMaxTime } = useMemo(
+    () => computeCalendarSlotLimits(Array.isArray(filiaisData) ? filiaisData : [], selectedFilial),
+    [selectedFilial, filiaisData]
+  );
 
   const { mutateAsync: mutateAddEvent } = useMutation({
     mutationFn: postScheduleAsync,
