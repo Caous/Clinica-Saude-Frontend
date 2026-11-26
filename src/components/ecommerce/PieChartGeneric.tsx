@@ -2,6 +2,7 @@ import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { useState } from "react";
 import { MoreDotIcon } from "../../icons";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface PieChartGenericProps {
   title: string;
@@ -36,11 +37,12 @@ export default function PieChartGeneric({
     setIsOpen(false);
   }
 
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "pie",
       height: height,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
     labels: labels,
     colors: colors,
@@ -114,7 +116,7 @@ export default function PieChartGeneric({
             color: #ffffff; 
             border-radius: 6px; 
             font-size: 14px; 
-            font-family: Outfit, sans-serif;
+            font-family: ${brandFont};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             position: relative;
             z-index: 999;

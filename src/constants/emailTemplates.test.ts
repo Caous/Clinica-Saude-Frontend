@@ -108,3 +108,24 @@ describe("rodapé de e-mail com telefone e endereço do branding (UT-7, UT-8)", 
     expect(html).toContain("📍 A &amp; B &lt;i&gt;");
   });
 });
+
+describe("logo e fonte dos templates (UT-11, AC-5)", () => {
+  const PNG_BRAND = { ...ACME, logoDarkUrl: "/images/brand/cuidaflux/logo-horizontal-escuro.png" };
+
+  it.each(TEMPLATE_IDS)("%s: cabeçalho usa o logo .png do Branding com URL absoluta (caminho relativo)", (id) => {
+    const html = getTemplateById(id, PNG_BRAND)!.html;
+    expect(html).toContain(`<img src="${window.location.origin}/images/brand/cuidaflux/logo-horizontal-escuro.png"`);
+  });
+
+  it.each(TEMPLATE_IDS)("%s: URL absoluta do logo é mantida", (id) => {
+    const html = getTemplateById(id, { ...ACME, logoDarkUrl: "https://cdn.example.com/logo.png" })!.html;
+    expect(html).toContain('<img src="https://cdn.example.com/logo.png"');
+  });
+
+  it.each(TEMPLATE_IDS)("%s: não depende de web font (fonte de sistema)", (id) => {
+    const html = getTemplateById(id, PNG_BRAND)!.html;
+    expect(html).not.toMatch(/@font-face/i);
+    expect(html).not.toMatch(/@import\s+url/i);
+    expect(html).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/i);
+  });
+});

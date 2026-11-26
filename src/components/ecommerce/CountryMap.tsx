@@ -2,6 +2,7 @@
 import { VectorMap } from "@react-jvectormap/core";
 import { worldMill } from "@react-jvectormap/world";
 import { useBrandColors } from "../../hooks/useBrandColors";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 // Define the component props
 interface CountryMapProps {
@@ -10,6 +11,7 @@ interface CountryMapProps {
 
 const CountryMap: React.FC<CountryMapProps> = ({ mapColor }) => {
   const { primary } = useBrandColors();
+  const brandFont = useBrandFont();
   return (
     <VectorMap
       map={worldMill}
@@ -62,7 +64,7 @@ const CountryMap: React.FC<CountryMapProps> = ({ mapColor }) => {
         initial: {
           fill: mapColor || "#D0D5DD",
           fillOpacity: 1,
-          fontFamily: "Outfit",
+          fontFamily: brandFont,
           stroke: "none",
           strokeWidth: 0,
           strokeOpacity: 0,

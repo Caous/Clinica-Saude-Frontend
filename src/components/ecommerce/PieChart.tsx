@@ -3,6 +3,7 @@ import { ApexOptions } from "apexcharts";
 import { useState } from "react";
 import { MoreDotIcon } from "../../icons";
 import { DashboardPathologyResponseDto } from "../../services/model/Dto/Response/DashboardPathologyResponseDto";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface PatologiasPieChartProps {
   data?: DashboardPathologyResponseDto[];
@@ -21,11 +22,12 @@ export default function PatologiasPieChart({ data, loading = false }: Patologias
   
   const series = chartData.map(item => item.quantidade);
   const labels = chartData.map(item => item.patologia);
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "pie",
       height: 350,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
     labels: labels,
     colors: ["#3C50E0", "#06B6D4", "#F59E0B", "#EF4444", "#10B981", "#8B5CF6", "#F97316", "#EC4899"], // Cores variadas para patologias
@@ -87,7 +89,7 @@ export default function PatologiasPieChart({ data, loading = false }: Patologias
       },
       style: {
         fontSize: "14px",
-        fontFamily: "Outfit, sans-serif",
+        fontFamily: brandFont,
       },
     },
     stroke: {

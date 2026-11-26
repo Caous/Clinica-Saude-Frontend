@@ -20,6 +20,15 @@ export interface Branding {
   phone: string;
   /** Endereço exibido no rodapé de e-mail; vazio = omitido. */
   address: string;
+  /** Família da fonte da marca (texto corrido); vazio = fonte atual do front. */
+  fontFamily: string;
+  /**
+   * Família dos títulos; vazio = usar `fontFamily`. Configurada sozinha (sem `fontFamily`),
+   * define apenas `--font-brand-heading`; com ambas vazias nenhuma variável de fonte é definida.
+   */
+  fontHeadingFamily: string;
+  /** CSS da fonte (relativa ou https); vazio = nada a carregar. */
+  fontUrl: string;
 }
 
 export const FALLBACK_BRANDING: Readonly<Branding> = Object.freeze({
@@ -35,6 +44,9 @@ export const FALLBACK_BRANDING: Readonly<Branding> = Object.freeze({
   supportEmail: "suporte@example.com",
   phone: "",
   address: "",
+  fontFamily: "",
+  fontHeadingFamily: "",
+  fontUrl: "",
 });
 
 const BRANDING_KEYS = Object.keys(FALLBACK_BRANDING) as ReadonlyArray<keyof Branding>;
@@ -44,6 +56,7 @@ const SAFE_URL = /^(?:\/(?![\/\\])[^\s\\"'<>]*|https:\/\/[^\s\\"'<>]+)$/;
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const EMAIL = /^[^\s@"'<>]+@[^\s@"'<>]+\.[^\s@"'<>]+$/;
 
+const FONT_FAMILY = /^[A-Za-z0-9 ,-]{1,100}$/;
 const FREE_TEXT = /^[^<>]{1,200}$/;
 const MIN_PRIMARY_CONTRAST = 4.5;
 
@@ -58,10 +71,19 @@ const FIELD_VALIDATORS: Partial<Record<keyof Branding, RegExp>> = {
   supportEmail: EMAIL,
   phone: FREE_TEXT,
   address: FREE_TEXT,
+  fontFamily: FONT_FAMILY,
+  fontHeadingFamily: FONT_FAMILY,
+  fontUrl: SAFE_URL,
 };
 
-/** Campos de texto livre: inválido vira vazio (não herda o fallback, que também é vazio). */
-const OPTIONAL_TEXT_KEYS: ReadonlyArray<keyof Branding> = ["phone", "address"];
+/** Campos opcionais: inválido vira vazio (não herda o fallback, que também é vazio). */
+const OPTIONAL_TEXT_KEYS: ReadonlyArray<keyof Branding> = [
+  "phone",
+  "address",
+  "fontFamily",
+  "fontHeadingFamily",
+  "fontUrl",
+];
 
 function parseHexChannels(hexColor: string): [number, number, number] | null {
   const digits = hexColor.replace(/^#/, "");

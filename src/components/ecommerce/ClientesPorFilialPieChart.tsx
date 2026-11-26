@@ -3,6 +3,7 @@ import { ApexOptions } from "apexcharts";
 import { useState } from "react";
 import { MoreDotIcon } from "../../icons";
 import { DashboardClientesPorFilialResponseDto } from "../../services/model/Dto/Response/DashboardClientesPorFilialResponseDto";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface ClientesPorFilialPieChartProps {
   data?: DashboardClientesPorFilialResponseDto[];
@@ -21,11 +22,12 @@ export default function ClientesPorFilialPieChart({ data, loading = false }: Cli
   const series = chartData.map((item) => item.quantidade);
   const labels = chartData.map((item) => item.nomeFilial);
 
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     chart: {
       type: "pie",
       height: 350,
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
     },
     labels: labels,
     colors: ["#3C50E0", "#06B6D4", "#F59E0B", "#EF4444", "#10B981", "#8B5CF6", "#F97316", "#EC4899"],
@@ -89,7 +91,7 @@ export default function ClientesPorFilialPieChart({ data, loading = false }: Cli
             color: #ffffff;
             border-radius: 6px;
             font-size: 14px;
-            font-family: Outfit, sans-serif;
+            font-family: ${brandFont};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
           ">
             <div style="font-weight: 600; margin-bottom: 4px;">${filialName}</div>

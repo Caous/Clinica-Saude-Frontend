@@ -33,6 +33,9 @@ describe("resolveBranding (UT-9)", () => {
       supportEmail: "ajuda@acme.example",
       phone: "(11) 4000-0000",
       address: "Rua Exemplo, 100",
+      fontFamily: "Inter",
+      fontHeadingFamily: "Lora",
+      fontUrl: "/fonts/f.css",
     };
     expect(resolveBranding(full, FALLBACK_BRANDING)).toEqual(full);
   });
@@ -66,6 +69,9 @@ describe("resolveBranding (UT-9)", () => {
       supportEmail: "suporte@example.com",
       phone: "",
       address: "",
+      fontFamily: "",
+      fontHeadingFamily: "",
+      fontUrl: "",
     });
   });
 });
@@ -224,5 +230,45 @@ describe("deriveBrandShades", () => {
   it("retorna null para tamanhos não suportados (5 ou 7 dígitos)", () => {
     expect(deriveBrandShades("#12345")).toBeNull();
     expect(deriveBrandShades("#1234567")).toBeNull();
+  });
+});
+
+describe("resolveBranding: campos de fonte (UT-5, paridade com o backend)", () => {
+  const resolveFont = (input: Record<string, unknown>) => resolveBranding(input, FALLBACK_BRANDING);
+
+  it("fallback tem fontes vazias", () => {
+    expect(FALLBACK_BRANDING.fontFamily).toBe("");
+    expect(FALLBACK_BRANDING.fontHeadingFamily).toBe("");
+    expect(FALLBACK_BRANDING.fontUrl).toBe("");
+  });
+
+  it("fontes válidas passam", () => {
+    const url = "https://fonts.googleapis.com/css2?family=Inter&display=swap";
+    const resolved = resolveFont({ fontFamily: "Inter, sans-serif", fontHeadingFamily: "Bricolage Grotesque", fontUrl: url });
+    expect(resolved.fontFamily).toBe("Inter, sans-serif");
+    expect(resolved.fontHeadingFamily).toBe("Bricolage Grotesque");
+    expect(resolved.fontUrl).toBe(url);
+  });
+
+  it("fontUrl relativa é aceita", () => {
+    expect(resolveFont({ fontUrl: "/fonts/brand.css" }).fontUrl).toBe("/fonts/brand.css");
+  });
+
+  it("fontFamily/fontHeadingFamily inválidos viram vazio", () => {
+    const resolved = resolveFont({ fontFamily: "Inter;}body{x:1", fontHeadingFamily: "a".repeat(101) });
+    expect(resolved.fontFamily).toBe("");
+    expect(resolved.fontHeadingFamily).toBe("");
+  });
+
+  it.each(["javascript:x", "//evil.com/f.css", "http://x", "https://a.com/x y", 'https://a.com/"x'])(
+    "fontUrl inválida (%s) vira vazio",
+    (fontUrl) => {
+      expect(resolveFont({ fontUrl }).fontUrl).toBe("");
+    }
+  );
+
+  it("sem campos de fonte: vazios, sem exceção", () => {
+    const resolved = resolveFont({ name: "X" });
+    expect([resolved.fontFamily, resolved.fontHeadingFamily, resolved.fontUrl]).toEqual(["", "", ""]);
   });
 });

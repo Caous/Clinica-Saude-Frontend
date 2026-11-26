@@ -1,13 +1,16 @@
 import { useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { FALLBACK_BRANDING, BRAND_SHADE_KEYS, deriveBrandShades } from "../../config/branding";
+import { SYSTEM_FONT_FALLBACK } from "../../config/brandFont";
 import { useBranding } from "../../hooks/useBranding";
 
 const SHADE_VARIABLES = BRAND_SHADE_KEYS.map((shade) => `--color-brand-${shade}`);
 const SECONDARY_VARIABLE = "--color-brand-secondary";
+const FONT_VARIABLE = "--font-brand";
+const FONT_HEADING_VARIABLE = "--font-brand-heading";
 
 /**
- * Aplica o branding ao <head>: favicon, título da aba (padrão "Página - Marca") e cores do tema.
+ * Aplica o branding ao <head>: favicon, fonte (link + `--font-brand*`), título da aba (padrão "Página - Marca") e cores do tema.
  * As cores sobrescrevem em runtime as variáveis CSS do Tailwind (`--color-brand-*`); sem cores
  * customizadas válidas (iguais ao fallback ou inválidas) o tema estático de index.css é mantido.
  * Variáveis de gray não são tocadas, preservando o modo escuro.
@@ -38,6 +41,21 @@ export default function BrandingHead() {
     };
   }, [brandShades, secondaryColor]);
 
+  // Fonte: sem fontFamily as variáveis ficam indefinidas e o CSS cai na fonte padrão do tema (index.css).
+  const { fontFamily, fontHeadingFamily, fontUrl } = brand;
+  useEffect(() => {
+    const headingFamily = fontHeadingFamily || fontFamily;
+    if (headingFamily === "") return;
+    const style = document.documentElement.style;
+    if (fontFamily !== "") style.setProperty(FONT_VARIABLE, `${fontFamily}, ${SYSTEM_FONT_FALLBACK}`);
+    style.setProperty(FONT_HEADING_VARIABLE, `${headingFamily}, ${SYSTEM_FONT_FALLBACK}`);
+
+    return () => {
+      style.removeProperty(FONT_VARIABLE);
+      style.removeProperty(FONT_HEADING_VARIABLE);
+    };
+  }, [fontFamily, fontHeadingFamily]);
+
   // Favicon: reaproveita o <link rel="icon"> estático do index.html (fallback) em vez de
   // duplicá-lo; Helmet não remove tags que ele não criou.
   const { faviconUrl } = brand;
@@ -53,6 +71,7 @@ export default function BrandingHead() {
 
   return (
     <Helmet defaultTitle={brand.name} titleTemplate={`%s - ${brand.name}`}>
+      {fontUrl !== "" && <link rel="stylesheet" href={fontUrl} data-brand-font="" />}
       {brandShades && <meta name="theme-color" content={primaryColor} />}
     </Helmet>
   );

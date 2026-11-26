@@ -5,6 +5,7 @@ import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { MoreDotIcon } from "../../icons";
 import { useState } from "react";
 import { DashboardMonthlyChartResponse, DashboardMonthlyMultiSeriesResponse } from "../../services/model/dashboard.types";
+import { useBrandFont } from "../../hooks/useBrandFont";
 
 interface MonthlySessionsChartProps {
   data?: DashboardMonthlyChartResponse | DashboardMonthlyMultiSeriesResponse | null;
@@ -37,10 +38,11 @@ export default function MonthlySessionsChart({ data, loading = false }: MonthlyS
     chartSeries = data.series || [];
   }
 
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     colors: ["#10B981", "#EF4444", "#F59E0B"], // Verde para realizadas, vermelho para canceladas, amarelo para reagendadas
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       type: "bar",
       height: 180,
       toolbar: {
@@ -76,7 +78,7 @@ export default function MonthlySessionsChart({ data, loading = false }: MonthlyS
       show: true,
       position: "top",
       horizontalAlign: "left",
-      fontFamily: "Outfit",
+      fontFamily: brandFont,
       labels: {
         colors: "#6B7280", // cor do texto da legenda
       },

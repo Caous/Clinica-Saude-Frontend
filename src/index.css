@@ -7,7 +7,8 @@ layer(base);
 
 @theme {
   --font-*: initial;
-  --font-outfit: Outfit, sans-serif;
+  /* Fonte da marca (BrandingHead define --font-brand); Outfit permanece como fallback. */
+  --font-outfit: var(--font-brand, Outfit, sans-serif);
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -187,6 +188,15 @@ layer(base);
   }
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
+  }
+  /* Sem --font-brand-heading os títulos herdam a fonte do body (aparência atual). */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-brand-heading, inherit);
   }
 }
 

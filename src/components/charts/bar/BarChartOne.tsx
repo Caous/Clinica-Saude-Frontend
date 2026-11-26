@@ -1,13 +1,15 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { useBrandColors } from "../../../hooks/useBrandColors";
+import { useBrandFont } from "../../../hooks/useBrandFont";
 
 export default function BarChartOne() {
   const { primary } = useBrandColors();
+  const brandFont = useBrandFont();
   const options: ApexOptions = {
     colors: [primary],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: brandFont,
       type: "bar",
       height: 180,
       toolbar: {
@@ -56,7 +58,7 @@ export default function BarChartOne() {
       show: true,
       position: "top",
       horizontalAlign: "left",
-      fontFamily: "Outfit",
+      fontFamily: brandFont,
     },
     yaxis: {
       title: {
